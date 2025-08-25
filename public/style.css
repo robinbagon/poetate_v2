@@ -1,0 +1,548 @@
+/* General styles */
+body {
+    margin: 0;
+    font-family: 'Inter';
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f9f9f9;
+}
+
+h1, h2, p {
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Poem container */
+.poem-container {
+    display: inline-block;
+    max-width: 700px;
+    padding: 20px;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: left;
+}
+
+/* Poem content */
+.poem-content {
+    font-size: 1.2em;
+    line-height: 1.8;
+    white-space: pre-wrap; /* Preserve line breaks and spacing */
+}
+
+/* Poem words */
+.poem-word {
+    transition: background-color 0.2s ease;
+    mix-blend-mode: multiply;
+}
+
+/* Highlighted word */
+/*.poem-word.highlighted {
+    background-color: rgba(255, 255, 0, 0.4);
+    padding-left: 3px;
+    padding-right: 3px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.2);
+    cursor: pointer;
+}*/
+
+.poem-word.highlighted {
+  mix-blend-mode: multiply;
+}
+
+.poem-word.highlighted-1 {
+    background-color: rgba(253, 255, 50, 0.5);
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.poem-word.highlighted-2 {
+    background-color: rgba(233, 255, 50, 0.6);
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.poem-word.highlighted-3{
+    background-color: rgba(212,255,50,0.7);
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.poem-word.highlighted-4{
+    background-color: rgba(171,255,50, 0.7);
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.poem-word.highlighted-5 {
+    background-color: rgba(140,255,50, 0.7);
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+
+/* Hovered word */
+.poem-word.hovered {
+    background-color: rgba(255, 180, 0, 0.6);
+    cursor: pointer;
+}
+
+/* Annotation modal */
+/*.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;   
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}*/
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    width: 300px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    border: 1px solid #ddd;
+    z-index: 1500;
+}
+
+.modal-content textarea {
+    height: 100px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: none;
+    font-family: 'Space Mono', monospace;
+}
+
+.modal-content button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.modal-content button:hover {
+    background-color: #0056b3;
+}
+
+/* Annotation box */
+.annotation-box {
+    position: absolute;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    max-width: 300px;   
+}
+
+.annotation-box.active {
+  
+}
+
+/* Annotation box glow on hover */
+.annotation-box.hovered {
+   border: 2px solid orange;
+    /*background: #fffbe6;*/
+   background: #ffffff;
+
+}
+
+#annotation-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+    height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.annotation-line.hovered {
+    stroke: orange;
+    stroke-width: 2.5;
+}
+
+.annotation-edit {
+    width: 100%;
+    height: auto;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+.poem-stanza {
+    margin-bottom: 1.5em;
+}
+
+.poem-line {
+/*    text-indent: 2em; /* Optional */
+}
+
+.dashboard-container {
+  max-width: 800px;
+  margin: 50px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-container h1, h2 {
+  margin-bottom: 10px;
+}
+
+.dashboard-container ul {
+  list-style: none;
+  padding: 0;
+}
+
+.dashboard-container li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.auth-controls {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    font-family: sans-serif;
+    z-index: 10000;
+    background: white;
+    padding: 6px 12px;
+    border-radius: 5px;
+    box-shadow: 0 0 4px rgba(0,0,0,0.1);
+}
+.auth-controls button {
+    margin-left: 6px;
+}
+
+/* #addPoemButton {
+  margin-top: 15px;
+  padding: 10px 16px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#addPoemButton:hover {
+  background-color: #0056b3;
+}
+
+/*#logoutButton {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  padding: 10px 16px;
+  font-size: 16px;
+  background-color: #dc3545; /* Bootstrap-style red */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer; */
+}
+
+#logoutButton:hover {
+  background-color: #b02a37;
+}
+
+
+/* Top-right auth bar */
+.auth-bar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Arial', sans-serif;
+  font-size: 0.95em;
+}
+
+.auth-bar span {
+  color: #333;
+  font-weight: 500;
+}
+
+.auth-bar button {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 0.95em;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.auth-bar button:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Dashboard action buttons */
+.dashboard-container button {
+  padding: 6px 12px;
+  margin-left: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  /*background-color: #f5f5f5;*/
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/*.dashboard-container button:hover {
+  background-color: green;
+  border-color: #999;*/
+}
+
+/* Optional: better spacing between list items */
+.dashboard-container ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.dashboard-container li {
+  margin-bottom: 10px;
+}
+
+.share-btn {
+  padding: 6px 10px;
+  margin-left: 5px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.share-btn:hover {
+  background-color: greenyellow;
+  border-color: #999;
+}
+
+.share-btn:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+#dashboardContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: sans-serif;
+}
+
+#dashboardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header-buttons button {
+  background: none;
+  border: 1px solid #ccc;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.header-buttons button:hover {
+  background: #f4f4f4;
+  border-color: #888;
+}
+
+
+#poemList li.poem-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.poem-title {
+  flex: 1;
+  text-decoration: none;
+  color: #1a73e8; /* soft link blue */
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 4px 6px;
+}
+
+.poem-title:hover {
+  color: #0c47b7; /* slightly darker on hover */
+  background-color: rgba(0, 123, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px 6px;
+  transition: background-color 0.2s ease;
+}
+
+.poem-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.poem-buttons button {
+ /* background: none;*/
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.2rem 0.5rem;
+  transition: background 0.2s ease;
+}
+
+.poem-buttons button:hover {
+  background-color: lightgrey;
+  border-radius: 4px;
+}
+
+.custom-delete-btn {
+  width: 1.5em;
+  height: 1.5em;
+  background: url('/images/bin.svg') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+}
+
+.custom-eye {
+  width: 1.5em;
+  height: 1.5em;
+  background: url('/images/read_only.svg') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+}
+
+.custom-pencil {
+  width: 1.5em;
+  height: 1.5em;
+  background: url('/images/editable.svg') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+}
+
+.poem-word {
+  white-space: pre-wrap; /* preserves intentional spacing */
+  display: inline;        /* keep words inline */
+}
+
+.highlighted {
+  background-color: yellow;
+  border-radius: 1px;
+}
+
+.tier-info {
+  margin-bottom: 1em;
+  font-size: 0.8em;
+  color: lightgrey;
+}
+
+.highlight-glow {
+   transition: background-color 0.2s ease;  
+  border-bottom: solid;
+  border-bottom-color: grey;
+  border-bottom-width: 2px;
+  border-top: solid;
+  border-top-color: grey;
+  border-top-width: 2px;
+}
+
+.annotation-box-glow {
+    transition: all 0.2s ease;
+  transform: translateY(-3px); /* slight lift */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); /* bigger, soft shadow */
+  border-color: yellow;
+  background-color: yellow;
+}
+
+.annotation-line-glow {
+  stroke: #ffcc00; /* change line color or add glow effect */
+  stroke-width: 3;
+}
+
+.site-logo {
+  max-height: 100px;
+  margin: 20px;
+}
+
+.site-header {
+  display: flex;
+  justify-content: center;
+}
+
+.logo {
+  height: 100px;
+  width: auto;
+}
+
+/* Base highlight style */
+.poem-word.highlight {
+  border-radius: 0px;
+  padding: 0 0px;
+}
+
+/* Specific highlight colors */
+.poem-word.highlight-0 { background-color: #ff9f5d; }  /* orange */
+.poem-word.highlight-1 { background-color: #81e2ff; }  /* blue */
+.poem-word.highlight-2 { background-color: #f5f750; }  /* yellow */
+.poem-word.highlight-3 { background-color: #efa7e3; }  /* purple */
+.poem-word.highlight-4 { background-color: #dde1e6; }  /* grey */
+.poem-word.highlight-5 { background-color: #b8fff6; }  /* galazio */
+.poem-word.highlight-6 { background-color: #ffd68d; }  /* light orange */
+.poem-word.highlight-7 { background-color: #e6efad; }  /* green */
+
+
+
+/* Annotation boxes */
+.annotation-box.highlight-0 { border: 2px solid #ff9f5d; background-color: #ffe1cc; }
+.annotation-box.highlight-1 { border: 2px solid #81e2ff; background-color: #d9f7ff; }
+.annotation-box.highlight-2 { border: 2px solid #f5f750; background-color: #fcfccf; }
+.annotation-box.highlight-3 { border: 2px solid #efa7e3; background-color: #f9dcf5; }
+.annotation-box.highlight-4 { border: 2px solid #dde1e6; background-color: #f5f6f8; }
+.annotation-box.highlight-5 { border: 2px solid #b8fff6; background-color: #e6fffb; }
+.annotation-box.highlight-6 { border: 2px solid #ffd68d; background-color: #ffefd2; }
+.annotation-box.highlight-7 { border: 2px solid #e6efad; background-color: #f4f7e0; }
+
+/* Hover effects (existing glow) */
+
+
+
+
+.annotation-line-glow {
+  stroke-width: 3;
+  stroke-opacity: 0.8;
+}

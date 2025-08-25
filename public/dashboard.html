@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Logo outside dashboard container -->
+  <div class="site-header">
+    <img src="images/logo-trans.png" alt="Poetate Logo" class="logo" />
+  </div>
+
+  <div class="dashboard-container">
+    <div id="dashboardHeader" class="dashboard-header">
+      <p><span id="userEmail"></span></p>
+
+      <div class="header-buttons">
+        <button id="addPoemButton">➕ Add New Poem</button>
+        <button id="logoutButton">Logout</button>
+      </div>
+    </div>
+
+    <h2>My Poems</h2>
+    <ul id="poemList"></ul>
+    <div id="usage-info" class="tier-info"></div>
+  </div>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

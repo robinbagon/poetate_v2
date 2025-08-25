@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Annotations</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ✅ Auth container (top-right bar) -->
+  <div id="authStatus" class="auth-bar"></div>
+
+  <!-- SVG layer for annotation lines -->
+  <svg id="annotation-lines"></svg>
+
+  <!-- Poem container -->
+  <div class="poem-container">
+    <div class="poem-content" id="poemContent">
+      <!-- Poem will be rendered here -->
+    </div>
+  </div>
+
+  <!-- Annotation modal -->
+  <div id="annotationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <textarea id="annotationText" placeholder="Enter your annotation here..."></textarea>
+      <button id="saveAnnotation">Save Annotation</button>
+      <button id="cancelAnnotation">Cancel</button>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

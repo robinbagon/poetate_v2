@@ -1,0 +1,107 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+textarea {
+  width: 100%;
+  min-height: 200px;
+  font-family: 'Space Mono', monospace;
+  font-size: 1rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+button {
+  margin-top: 1.2rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #555;
+}
+
+.auth-bar {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 0.9em;
+}
+
+.auth-btn, .auth-link {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.auth-btn:hover, .auth-link:hover {
+  color: #0056b3;
+}
+
+.auth-welcome {
+  font-weight: 500;
+}
+
+.auth-bar button {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 0.95em;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.auth-bar button:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.logo-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.site-logo {
+    max-width: 200px;
+    height: auto;
+}
