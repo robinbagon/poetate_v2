@@ -1,17 +1,10 @@
 {
-  "name": "poetate",
-   "private": true,
-   "type": "module",
+  "name": "poetry-annotations",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
-  },
-   "engines": {
-    "node": ">=18 <21"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
