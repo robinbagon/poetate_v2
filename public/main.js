@@ -1,6 +1,5 @@
 // main.js
 import { renderPoem } from './renderPoem.js';
-import { initAnnotations } from './annotations.js';
 
 async function loadPoemAndRender() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -19,7 +18,17 @@ async function loadPoemAndRender() {
 
     const poem = await response.json();
     renderPoem(poem.content); // Render the poem first
-    await initAnnotations();  // Then load and render annotations
+
+    // Detect touch device
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    if (isTouchDevice) {
+      const module = await import('./annotations-touch.js');
+      await module.initAnnotations({ poemId });
+    } else {
+      const module = await import('./annotations.js');
+      await module.initAnnotations({ poemId });
+    }
   } catch (error) {
     console.error('Error loading poem:', error.message);
   }
