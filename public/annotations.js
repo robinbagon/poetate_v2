@@ -199,27 +199,27 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
   socket.on('new-annotation', data => {
     if (!annotationsMap.has(data._id)) {
       annotationsMap.set(data._id, data);
-      renderAnnotationBox(data, readOnly);
+      renderAnnotationBox(data, false, data.colorClass);
 
       data.wordIndices.forEach(index => {
-        const span = document.querySelector(`.poem-word[data-word-index="${index}"]`);
-        if (span) {
-          span.dataset.annotationId = data.annotationId;
-          span.dataset.highlightCount = parseInt(span.dataset.highlightCount || '0', 10) + 1;
-          span.classList.add('highlighted', data.highlightClass);
-          span.dataset.annotationClass = data.highlightClass;
-          span.title = `Highlighted ${span.dataset.highlightCount} time${span.dataset.highlightCount > 1 ? 's' : ''}`;
-        }
-      });
+      const span = document.querySelector(`.poem-word[data-word-index="${index}"]`);
+      if (span) {
+        span.dataset.annotationId = data.annotationId;
+        span.dataset.highlightCount = parseInt(span.dataset.highlightCount || '0', 10) + 1;
+        span.classList.add('highlight', data.colorClass); // ✅ use same logic
+        span.dataset.annotationClass = data.colorClass;
+        span.title = `Highlighted ${span.dataset.highlightCount} time${span.dataset.highlightCount > 1 ? 's' : ''}`;
+      }
+    });
 
-      addHoverListenersForAnnotation(data.annotationId);
-    }
-  });
+    addHoverListenersForAnnotation(data.annotationId);
+  }
+});
 
 socket.on('delete-annotation', ({ _id }) => {
     const boxData = annotationBoxes.get(_id);
     if (!boxData) return;
-    const { box, line, annotation } = boxData;
+    const { box, line, annotation, spans } = boxData;
 
     if (box && box.parentNode) box.remove();
     if (line && line.parentNode) line.remove();
@@ -230,26 +230,32 @@ socket.on('delete-annotation', ({ _id }) => {
             // Remove the correct highlight class
             if (annotation.colorClass) span.classList.remove(annotation.colorClass);
 
-            // Remove the generic 'highlight' class if this was the last annotation
-            let count = parseInt(span.dataset.highlightCount || '1', 10);
-            count = Math.max(0, count - 1);
+            // Remove highlight-related dataset properties
+            delete span.dataset.annotationId;
+            delete span.dataset.annotationClass;
+            delete span.dataset.highlightCount;
+            span.removeAttribute('title');
 
-            if (count > 0) {
-                span.dataset.highlightCount = count;
-                span.title = `Highlighted ${count} time${count > 1 ? 's' : ''}`;
-            } else {
-                delete span.dataset.annotationId;
-                delete span.dataset.annotationClass;
-                delete span.dataset.highlightCount;
-                span.removeAttribute('title');
-                span.classList.remove('highlight');
-            }
+            // 🚀 Remove highlight-related classes
+            span.classList.remove('hovered', 'highlighted', 'hovered', 'highlight-glow', 'highlight');
+
+            // Remove hover event listeners (clone trick)
+        const newSpan = span.cloneNode(true);
+        span.parentNode.replaceChild(newSpan, span);
         }
     });
+
+    // ✅ Explicitly remove glow from all related elements
+    if (spans && spans.forEach) {
+        spans.forEach(el => el.classList.remove('highlight-glow'));
+    }
+    if (box) box.classList.remove('annotation-box-glow');
+    if (line) line.classList.remove('annotation-line-glow');
 
     annotationBoxes.delete(_id);
     annotationsMap.delete(_id);
 });
+
 
 
   socket.on('update-annotation-position', data => {

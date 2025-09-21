@@ -23,7 +23,7 @@ h1, h2, p {
     border: 1px solid #ddd;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     text-align: left;
-
+    
 }
 
 /* Poem content */
@@ -31,7 +31,6 @@ h1, h2, p {
     font-size: 1.2em;
     line-height: 1.8;
     white-space: pre-wrap; /* Preserve line breaks and spacing */
-    overflow-y: auto; 
 }
 
 /* Poem words */
@@ -85,10 +84,10 @@ h1, h2, p {
 
 
 /* Hovered word */
-.poem-word.hovered {
+/*.poem-word.hovered {
     background-color: rgba(255, 180, 0, 0.6);
     cursor: pointer;
-}
+}*/
 
 /* Annotation modal */
 /*.modal-overlay {

@@ -8,7 +8,12 @@ const session = require('express-session');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: ['https://poetate.onrender.com', 'http://localhost:5000', 'http://192.168.25.119:5000', 'https:///poetate.org'], // allows all origins
+    methods: ['GET', 'POST']
+  }
+});
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -53,25 +58,17 @@ app.get('/annotation.html', (req, res) => res.sendFile(path.join(__dirname, 'pub
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  socket.on('new-annotation', (data) => {
-    socket.broadcast.emit('new-annotation', data);
-  });
+  socket.on('new-annotation', (data) => socket.broadcast.emit('new-annotation', data));
+  socket.on('update-annotation-text', (data) => socket.broadcast.emit('update-annotation-text', data));
+  socket.on('update-annotation-position', (data) => socket.broadcast.emit('update-annotation-position', data));
+  socket.on('delete-annotation', (data) => socket.broadcast.emit('delete-annotation', data));
 
-  socket.on('update-annotation-position', (data) => {
-    socket.broadcast.emit('update-annotation-position', data);
-  });
-
-  socket.on('delete-annotation', (data) => {
-    socket.broadcast.emit('delete-annotation', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
-  });
+  socket.on('disconnect', () => console.log('A user disconnected'));
 });
+
 
 // Start server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${PORT}`);
 });
