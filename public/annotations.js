@@ -24,24 +24,39 @@ function getNextHighlightClass() {
 document.addEventListener('DOMContentLoaded', async () => {
   const authStatus = document.getElementById('authStatus');
 
+  // Show placeholder while fetching
+  authStatus.textContent = 'Loading...';
+  authStatus.style.minWidth = '120px';
+  authStatus.style.minHeight = '30px';
+
   try {
     const response = await fetch('/api/auth/user', { credentials: 'include' });
+
     if (response.ok) {
       const user = await response.json();
+
+      // Populate auth bar
       authStatus.innerHTML = `
         <span>Welcome, ${user.email}</span>
         <button id="dashboardBtn">Dashboard</button>
         <button id="logoutBtn">Logout</button>
       `;
 
-      document.getElementById('logoutBtn').addEventListener('click', async () => {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-        window.location.reload();
-      });
+      // Attach listeners safely after DOM update
+      setTimeout(() => {
+        const logoutBtn = document.getElementById('logoutBtn');
+        const dashboardBtn = document.getElementById('dashboardBtn');
 
-      document.getElementById('dashboardBtn').addEventListener('click', () => {
-        window.location.href = '/dashboard.html';
-      });
+        if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          window.location.reload();
+        });
+
+        if (dashboardBtn) dashboardBtn.addEventListener('click', () => {
+          window.location.href = '/dashboard.html';
+        });
+      }, 0);
+
     } else {
       setupLoginRegister();
     }
@@ -57,9 +72,17 @@ function setupLoginRegister() {
     <button id="loginBtn">Login</button>
     <button id="registerBtn">Register</button>
   `;
-  document.getElementById('loginBtn').addEventListener('click', () => window.location.href = '/login.html');
-  document.getElementById('registerBtn').addEventListener('click', () => window.location.href = '/register.html');
+
+  // Attach listeners safely after DOM update
+  setTimeout(() => {
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+
+    if (loginBtn) loginBtn.addEventListener('click', () => window.location.href = '/login.html');
+    if (registerBtn) registerBtn.addEventListener('click', () => window.location.href = '/register.html');
+  }, 0);
 }
+
 
 export async function initAnnotations({ poemId = null, readOnly = false } = {}) {
   const poemContent = document.getElementById('poemContent');
