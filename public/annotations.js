@@ -239,6 +239,22 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
   }
 });
 
+  // -------------------- HELPER: resize SVG layer --------------------
+function resizeSvgLayer() {
+  const svg = document.getElementById('annotation-lines');
+  if (svg) {
+    svg.setAttribute('width', document.documentElement.scrollWidth);
+    svg.setAttribute('height', document.documentElement.scrollHeight);
+  }
+}
+
+// Run once at start
+document.addEventListener('DOMContentLoaded', resizeSvgLayer);
+
+// Keep it in sync on resize/scroll
+window.addEventListener('resize', resizeSvgLayer);
+window.addEventListener('scroll', resizeSvgLayer);
+
 socket.on('delete-annotation', ({ _id }) => {
     const boxData = annotationBoxes.get(_id);
     if (!boxData) return;
@@ -295,7 +311,7 @@ socket.on('delete-annotation', ({ _id }) => {
     box.style.top = `${baseY + data.relativePosition.dy}px`;
 
     if (line && line.parentNode) line.parentNode.removeChild(line);
-    const newLine = drawLine(targetSpan, box, data._id);
+    const newLine = drawLine(targetSpan, box, annotation.annotationId);
     annotationBoxes.set(data._id, { ...boxData, line: newLine });
   });
 
@@ -441,7 +457,10 @@ annotation.wordIndices.forEach(index => {
         annotationBoxes.delete(annotationId);
         annotationsMap.delete(annotationId);
 
-        socket.emit('delete-annotation', { _id: annotationId });
+        socket.emit('delete-annotation', { 
+            _id: annotationId,
+            annotationId: annotation.annotationId
+             });
     });
 
 
@@ -532,36 +551,37 @@ function makeDraggable(el, annotationId) {
         if (e.button !== 0) return;
         e.preventDefault();
 
-        offsetX = e.clientX - el.getBoundingClientRect().left;
-        offsetY = e.clientY - el.getBoundingClientRect().top;
+        const rect = el.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
 
         function onMouseMove(moveEvent) {
-            el.style.left = `${moveEvent.clientX - offsetX}px`;
-            el.style.top = `${moveEvent.clientY - offsetY}px`;
+            // Use pageX/pageY instead of clientX/clientY
+            el.style.left = `${moveEvent.pageX - offsetX}px`;
+            el.style.top  = `${moveEvent.pageY - offsetY}px`;
 
             const data = annotationBoxes.get(annotationId);
-if (data && data.line) {
-    const path = data.line;
-    const startRect = data.targetSpan.getBoundingClientRect();
-    const endRect = el.getBoundingClientRect();
+            if (data && data.line) {
+                const path = data.line;
+                const startRect = data.targetSpan.getBoundingClientRect();
+                const endRect = el.getBoundingClientRect();
 
-    const startX = startRect.left + startRect.width / 2 + window.scrollX;
-    const startY = startRect.top + startRect.height / 2 + window.scrollY;
-    const endX = endRect.left + endRect.width / 2 + window.scrollX;
-    const endY = endRect.top + endRect.height / 2 + window.scrollY;
+                const startX = startRect.left + startRect.width / 2 + window.scrollX;
+                const startY = startRect.top + startRect.height / 2 + window.scrollY;
+                const endX = endRect.left + endRect.width / 2 + window.scrollX;
+                const endY = endRect.top + endRect.height / 2 + window.scrollY;
 
-    const curveAmount = 50;
-    const midX = (startX + endX) / 2;
+                const curveAmount = 50;
+                const midX = (startX + endX) / 2;
 
-    const d = `
-        M ${startX},${startY}
-        C ${startX + curveAmount},${startY}
-          ${midX - curveAmount},${endY}
-          ${endX},${endY}
-    `;
-    path.setAttribute("d", d);
-}
-
+                const d = `
+                    M ${startX},${startY}
+                    C ${startX + curveAmount},${startY}
+                      ${midX - curveAmount},${endY}
+                      ${endX},${endY}
+                `;
+                path.setAttribute("d", d);
+            }
         }
 
         function onMouseUp() {
@@ -577,8 +597,9 @@ if (data && data.line) {
             const spanX = spanRect.left + window.scrollX;
             const spanY = spanRect.top + window.scrollY;
 
-            const boxX = box.offsetLeft;
-            const boxY = box.offsetTop;
+            const boxRect = box.getBoundingClientRect();
+            const boxX = boxRect.left + window.scrollX;
+            const boxY = boxRect.top + window.scrollY;
 
             annotation.relativePosition = {
                 dx: boxX - spanX,
@@ -592,6 +613,7 @@ if (data && data.line) {
         document.addEventListener('mouseup', onMouseUp);
     });
 }
+
 
 function addHoverListenersForAnnotation(annotationId) {
     const spans = document.querySelectorAll(`.poem-word[data-annotation-id="${annotationId}"]`);
@@ -737,10 +759,11 @@ async function updateAnnotationPosition(annotation) {
         console.log(`Annotation ${annotation._id} position updated.`);
 
         // 🔄 Notify other clients about the position update
-        socket.emit('update-annotation-position', {
-            _id: annotation._id,
-            relativePosition: annotation.relativePosition
-        });
+socket.emit('update-annotation-position', {
+  _id: annotation._id,
+  annotationId: annotation.annotationId,   // <-- add this
+  relativePosition: annotation.relativePosition
+});
 
     } catch (err) {
         console.error('Error updating annotation position:', err);

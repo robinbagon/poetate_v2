@@ -30,79 +30,7 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
 
   await loadExistingAnnotations(poemId, readOnly);
 
-  if (!readOnly) {
-    let touchStartIndex = null;
-    let selectedIndices = [];
-    let isDragging = false;
-
-    // Helper to add/remove temporary highlight class for visual feedback
-    function updateTemporaryHighlight() {
-        document.querySelectorAll('.poem-word').forEach(span => {
-            span.classList.remove('temp-highlight');
-        });
-        selectedIndices.forEach(idx => {
-            const span = poemContent.querySelector(`.poem-word[data-word-index="${idx}"]`);
-            if (span) span.classList.add('temp-highlight');
-        });
-    }
-
-    poemContent.addEventListener('touchstart', e => {
-        if (e.touches.length > 1) return;
-
-        const word = e.target.closest('.poem-word');
-        if (!word) return;
-
-        touchStartIndex = parseInt(word.dataset.wordIndex);
-        selectedIndices = [touchStartIndex];
-        isDragging = false;
-
-        // Optional: start a short timer to detect long-press if desired
-    });
-
-    poemContent.addEventListener('touchmove', e => {
-        const touch = e.touches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        const word = element?.closest('.poem-word');
-        if (!word) return;
-
-        const index = parseInt(word.dataset.wordIndex);
-        if (!selectedIndices.includes(index)) {
-            selectedIndices.push(index);
-            selectedIndices.sort((a, b) => a - b); // keep in order
-            isDragging = true;
-            updateTemporaryHighlight(); // live feedback
-        }
-    });
-
-    poemContent.addEventListener('touchend', e => {
-        if (!selectedIndices.length) return;
-
-        // Commit the selection
-        selectedSpanIndices = [...selectedIndices];
-
-        const firstWord = poemContent.querySelector(`.poem-word[data-word-index="${selectedSpanIndices[0]}"]`);
-        if (!firstWord) return;
-
-        const rect = firstWord.getBoundingClientRect();
-        annotationModal.style.display = 'block';
-        annotationModal.style.position = 'absolute';
-        annotationModal.style.top = `${rect.bottom + window.scrollY}px`;
-        annotationModal.style.left = `${rect.left + window.scrollX}px`;
-
-        // Focus keyboard for annotation input
-        annotationText.focus();
-
-        // Clean up temp highlights
-        document.querySelectorAll('.poem-word').forEach(span => {
-            span.classList.remove('temp-highlight');
-        });
-
-        // Reset state
-        touchStartIndex = null;
-        selectedIndices = [];
-        isDragging = false;
-    });
-}
+  
 
 
 // Prevent native context menu
@@ -113,11 +41,18 @@ document.addEventListener('contextmenu', (e) => {
 // Create a floating "Annotate" button
 const annotateButton = document.createElement('button');
 annotateButton.innerText = 'Annotate';
+annotateButton.style.color = 'white';
+annotateButton.style.fontSize = '20px';        // bigger text
+annotateButton.style.fontWeight = '600';
+annotateButton.style.padding = '12px 18px';   // larger hit area
+annotateButton.style.minWidth = '90px';
+annotateButton.style.height = '44px';         // recommended touch target
+annotateButton.style.lineHeight = '20px';  
 annotateButton.style.position = 'absolute';
 annotateButton.style.display = 'none';
 annotateButton.style.zIndex = 9999;
 annotateButton.style.padding = '5px 10px';
-annotateButton.style.background = '#ffeb3b';
+annotateButton.style.background = '#85e085';
 annotateButton.style.border = '1px solid #aaa';
 annotateButton.style.borderRadius = '4px';
 document.body.appendChild(annotateButton);
@@ -152,8 +87,8 @@ document.addEventListener('selectionchange', () => {
 
     // Position the button near the selection
     const rect = range.getBoundingClientRect();
-    annotateButton.style.top = `${rect.top - 40 + window.scrollY}px`;
-    annotateButton.style.left = `${rect.left + window.scrollX}px`;
+    annotateButton.style.top = `${rect.top + 40 + window.scrollY}px`;
+    annotateButton.style.left = `${rect.right + window.scrollX + 10}px`;
     annotateButton.style.display = 'block';
   } else {
     annotateButton.style.display = 'none';
@@ -181,6 +116,7 @@ annotateButton.addEventListener('click', () => {
 });
 
 // Save annotation using the modal-level snapshot
+// Save annotation using the modal-level snapshot
 saveAnnotationButton.addEventListener('click', async () => {
   if (readOnly) return;
 
@@ -190,21 +126,27 @@ saveAnnotationButton.addEventListener('click', async () => {
   const highlightClass = getNextHighlightClass();
   const annotationId = 'ann-' + Math.random().toString(36).substr(2, 9);
 
+  // Build annotationData
   const annotationData = {
-    _id: null, // will be set after saving
+    _id: null, // will be patched after saving
     annotationId,
     text,
-    wordIndices: [...modalSelectedSpanIndices], // snapshot of selected words
+    wordIndices: [...modalSelectedSpanIndices],
     colorClass: highlightClass,
     timestamp: new Date().toISOString(),
     poemId: new URLSearchParams(window.location.search).get('poemId') || null
   };
 
   try {
-    // Save to server
+    // Save to server — must return a Mongo _id
     const saved = await saveAnnotation(annotationData);
+    if (!saved || !saved._id) throw new Error('No _id returned from server');
+
+    // Patch the same object with the new _id
     annotationData._id = saved._id;
-    annotationsMap.set(annotationData._id, annotationData);
+
+    // Store in maps
+    annotationsMap.set(annotationData.annotationId, annotationData);
 
     // Apply highlight to selected spans
     modalSelectedSpanIndices.forEach(index => {
@@ -217,7 +159,7 @@ saveAnnotationButton.addEventListener('click', async () => {
       }
     });
 
-    // Render the annotation box with full touch logic
+    // Render the annotation box only after _id is set
     renderAnnotationBox(annotationData, readOnly, highlightClass);
 
     // Clear modal and reset selections
@@ -226,15 +168,15 @@ saveAnnotationButton.addEventListener('click', async () => {
     selectedSpanIndices = [];
     modalSelectedSpanIndices = [];
 
-
-
-    // Emit new annotation via socket
+    // Emit new annotation via socket (include both IDs)
     socket.emit('new-annotation', annotationData);
 
   } catch (err) {
     console.error('Failed to save annotation:', err);
+    alert('Failed to save annotation.');
   }
 });
+
 
 
   cancelAnnotationButton.addEventListener('click', () => {
@@ -260,6 +202,32 @@ saveAnnotationButton.addEventListener('click', async () => {
     }
   });
 
+  // near your existing window.addEventListener('resize', ...) block
+window.addEventListener('scroll', () => {
+  // If you store annotationBoxes keyed by annotationId (as you do), iterate them
+  for (const [annotationId, { annotation, box, targetSpan }] of annotationBoxes.entries()) {
+    if (!box || !targetSpan) continue;
+
+    // If it has a relativePosition, recompute absolute box coords from the target span
+    if (annotation && annotation.relativePosition) {
+      const { dx, dy } = annotation.relativePosition;
+      const spanRect = targetSpan.getBoundingClientRect();
+      const baseX = spanRect.left + window.scrollX;
+      const baseY = spanRect.top + window.scrollY;
+      box.style.left = `${baseX + dx}px`;
+      box.style.top  = `${baseY + dy}px`;
+    } else {
+      // otherwise compute where the box should sit relative to the poem
+      updateAnnotationBoxPosition(annotationId);
+    }
+  }
+
+  // Recalculate/redraw the SVG/paths for every annotation
+  // Assumes your function redrawAllLines(annotationBoxes) recomputes using getBoundingClientRect()
+  redrawAllLines(annotationBoxes);
+}, { passive: true });
+
+
   // Load socket events
   setupSocketListeners();
 }
@@ -283,7 +251,7 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
 
   document.body.appendChild(box);
 
-  annotationBoxes.set(annotationData._id, { box, targetSpan, annotation: annotationData });
+  annotationBoxes.set(annotationData.annotationId, { box, targetSpan, annotation: annotationData });
 
   if (annotationData.relativePosition) {
     const { dx, dy } = annotationData.relativePosition;
@@ -292,7 +260,7 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
     box.style.top = `${baseRect.top + window.scrollY + dy}px`;
     box.style.position = 'absolute';
   } else {
-    updateAnnotationBoxPosition(annotationData._id);
+    updateAnnotationBoxPosition(annotationData.annotationId);
   }
 
   box.style.zIndex = currentZIndex++;
@@ -307,101 +275,104 @@ if (!readOnly) {
   let lastTap = 0;
 
   box.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) return;
-    e.preventDefault();
+  if (e.touches.length > 1) return;
+  e.preventDefault();
 
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    boxStartX = box.offsetLeft;
-    boxStartY = box.offsetTop;
-    isDragging = false;
+  startX = e.touches[0].pageX;   // ✅ use pageX/pageY
+  startY = e.touches[0].pageY;
+  boxStartX = box.offsetLeft;
+  boxStartY = box.offsetTop;
+  isDragging = false;
 
-    // Start long press timer
-    pressTimer = setTimeout(async () => {
-      if (!annotationData._id) return; // only delete saved annotations
-      if (!confirm('Delete this annotation?')) return;
+  // Start long press timer
+  pressTimer = setTimeout(async () => {
+    if (!annotationData.annotationId) return;
+    if (!confirm('Delete this annotation?')) return;
 
-      const success = await deleteAnnotation(annotationData._id);
-      if (!success) return;
-      deleteAnnotationBox(annotationData._id);
-      socket.emit('delete-annotation', { _id: annotationData._id });
-    }, LONG_PRESS_DELAY);
-  });
+    const success = await deleteAnnotation(annotationData._id);
+    if (!success) return;
 
-  box.addEventListener('touchmove', e => {
-    if (startX === null) return;
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-
-    // If moved beyond tolerance, cancel long press
-    if (Math.sqrt(dx*dx + dy*dy) > MOVE_TOLERANCE) {
-      clearTimeout(pressTimer);
-      isDragging = true;
-    }
-
-    // Drag the box
-    box.style.left = `${boxStartX + dx}px`;
-    box.style.top = `${boxStartY + dy}px`;
-
-    // Update connecting line if any
-    const data = annotationBoxes.get(annotationData._id);
-    if (data && data.line && data.line.isConnected) {
-  const startRect = data.targetSpan.getBoundingClientRect();
-  const endRect = box.getBoundingClientRect();
-  const midX = (startRect.left + endRect.left + endRect.width) / 2;
-
-  const d = `
-    M ${startRect.left + startRect.width / 2 + window.scrollX},${startRect.top + startRect.height / 2 + window.scrollY}
-    C ${startRect.left + startRect.width / 2 + 50},${startRect.top + startRect.height / 2 + window.scrollY}
-      ${midX - 50},${endRect.top + endRect.height / 2 + window.scrollY}
-      ${endRect.left + endRect.width / 2 + window.scrollX},${endRect.top + endRect.height / 2 + window.scrollY}
-  `;
-
-  data.line.setAttribute('d', d);
-}
-
-  });
-
-  box.addEventListener('touchend', async e => {
-    clearTimeout(pressTimer);
-
-    // Update relative position
-    if (startX !== null && annotationData._id) {
-      const entry = annotationBoxes.get(annotationData._id);
-      if (entry) {
-        const spanRect = entry.targetSpan.getBoundingClientRect();
-        annotationData.relativePosition = {
-          dx: box.offsetLeft - spanRect.left - window.scrollX,
-          dy: box.offsetTop - spanRect.top - window.scrollY
-        };
-        updateAnnotationPosition(annotationData);
-      }
-    }
-
-    makeEditable(box, annotationData.annotationId, annotationData, (updatedText) => {
-    // Update the box DOM without replacing the element
-    box.textContent = updatedText;
-
-    // Workaround: refresh the page to redraw lines
-    window.location.reload();    
+    deleteAnnotationBox(annotationData.annotationId);
+    socket.emit('delete-annotation', { 
+      _id: annotationData._id,
+      annotationId: annotationData.annotationId
+    });
+  }, LONG_PRESS_DELAY);
 });
 
+box.addEventListener('touchmove', e => {
+  if (startX === null) return;
 
-    // Reset state
-    startX = null;
-    startY = null;
-    isDragging = false;
-    lastTap = currentTime;
+  const dx = e.touches[0].pageX - startX;   // ✅ pageX/pageY
+  const dy = e.touches[0].pageY - startY;
+
+  // If moved beyond tolerance, cancel long press
+  if (Math.sqrt(dx * dx + dy * dy) > MOVE_TOLERANCE) {
+    clearTimeout(pressTimer);
+    isDragging = true;
+  }
+
+  // Drag the box visually
+  box.style.left = `${boxStartX + dx}px`;
+  box.style.top  = `${boxStartY + dy}px`;
+
+  // Update the connecting line
+  const data = annotationBoxes.get(annotationData.annotationId);
+  if (data) {
+    if (data.line && data.line.parentNode) {
+      data.line.parentNode.removeChild(data.line); // remove old line
+    }
+    const newLine = drawLine(data.targetSpan, box, annotationData.annotationId);
+    annotationBoxes.set(annotationData.annotationId, { ...data, line: newLine });
+  }
+});
+
+box.addEventListener('touchend', async e => {
+  clearTimeout(pressTimer);
+
+  // Update relative position
+  if (startX !== null && annotationData.annotationId) {
+    const entry = annotationBoxes.get(annotationData.annotationId);
+    if (entry) {
+      const spanRect = entry.targetSpan.getBoundingClientRect();
+      annotationData.relativePosition = {
+        dx: box.offsetLeft - (spanRect.left + window.scrollX),
+        dy: box.offsetTop - (spanRect.top + window.scrollY)
+      };
+      updateAnnotationPosition(annotationData);
+    }
+  }
+
+  makeEditable(box, annotationData.annotationId, annotationData, (updatedText) => {
+    box.textContent = updatedText;
+
+    const entry = annotationBoxes.get(annotationData.annotationId);
+    if (entry) entry.annotation.text = updatedText;
+
+    if (entry && entry.line && entry.line.parentNode) {
+      entry.line.parentNode.removeChild(entry.line);
+    }
+    const newLine = drawLine(entry.targetSpan, box, annotationData.annotationId);
+    annotationBoxes.set(annotationData.annotationId, { ...entry, line: newLine });
+
+    redrawAllLines(annotationBoxes);
   });
+
+  startX = null;
+  startY = null;
+  isDragging = false;
+});
+
 }
 
 
 
 
   // Draw line
-box.dataset.annotationId = annotationData._id;
+box.dataset.annotationId = annotationData.annotationId;
   const line = drawLine(targetSpan, box, annotationData.annotationId);
-  annotationBoxes.set(annotationData._id, { box, targetSpan, annotation: annotationData, line });
+  annotationBoxes.set(annotationData.annotationId, { box, targetSpan, annotation: annotationData, line });
+
 }
 
 // -------------------- HELPER FUNCTIONS --------------------
@@ -460,7 +431,7 @@ async function loadExistingAnnotations(poemId = null, readOnly = false) {
     const annotations = await response.json();
 
     for (const annotationData of annotations) {
-      annotationsMap.set(annotationData._id, annotationData);
+      annotationsMap.set(annotationData.annotationId, annotationData);
       const highlightClass = getNextHighlightClass();
       annotationData.colorClass = highlightClass;
       annotationData.wordIndices.forEach(index => {
@@ -488,6 +459,7 @@ async function updateAnnotationPosition(annotation) {
     });
     socket.emit('update-annotation-position', {
       _id: annotation._id,
+      annotationId: annotation.annotationId,
       relativePosition: annotation.relativePosition
     });
   } catch (err) {
@@ -495,10 +467,26 @@ async function updateAnnotationPosition(annotation) {
   }
 }
 
+// -------------------- HELPER: resize SVG layer --------------------
+function resizeSvgLayer() {
+  const svg = document.getElementById('annotation-lines');
+  if (svg) {
+    svg.setAttribute('width', document.documentElement.scrollWidth);
+    svg.setAttribute('height', document.documentElement.scrollHeight);
+  }
+}
+
+// Run once at start
+document.addEventListener('DOMContentLoaded', resizeSvgLayer);
+
+// Keep it in sync on resize/scroll
+window.addEventListener('resize', resizeSvgLayer);
+window.addEventListener('scroll', resizeSvgLayer);
+
 function setupSocketListeners() {
   socket.on('new-annotation', data => {
-    if (!annotationsMap.has(data._id)) {
-      annotationsMap.set(data._id, data);
+    if (!annotationsMap.has(data.annotationId)) {
+      annotationsMap.set(data.annotationId, data);
       renderAnnotationBox(data, false, data.colorClass);
 
       data.wordIndices.forEach(index => {
@@ -516,10 +504,10 @@ function setupSocketListeners() {
     }
   });
 
-  socket.on('delete-annotation', ({ _id }) => deleteAnnotationBox(_id));
+  socket.on('delete-annotation', ({ annotationId }) => deleteAnnotationBox(annotationId));
 
   socket.on('update-annotation-position', data => {
-    const boxData = annotationBoxes.get(data._id);
+    const boxData = annotationBoxes.get(data.annotationId);
     if (!boxData) return;
     const { box, targetSpan, annotation, line } = boxData;
     annotation.relativePosition = data.relativePosition;
@@ -532,12 +520,12 @@ function setupSocketListeners() {
     box.style.top = `${baseY + data.relativePosition.dy}px`;
 
     if (line && line.parentNode) line.parentNode.removeChild(line);
-    const newLine = drawLine(targetSpan, box, data._id);
-    annotationBoxes.set(data._id, { ...boxData, line: newLine });
+    const newLine = drawLine(targetSpan, box, data.annotationId);
+    annotationBoxes.set(data.annotationId, { ...boxData, line: newLine });
   });
 
-  socket.on('update-annotation-text', ({ _id, newText }) => {
-    const entry = annotationBoxes.get(_id);
+  socket.on('update-annotation-text', ({ annotationId, newText }) => {
+    const entry = annotationBoxes.get(annotationId);
     if (entry) {
       const { box, annotation } = entry;
       box.textContent = newText;
@@ -545,5 +533,6 @@ function setupSocketListeners() {
     }
 });
 }
+
 
 

@@ -17,7 +17,7 @@ export function makeEditable(boxElement, annotationId, annotationData, onUpdate)
         textarea.value = originalText;
         textarea.className = 'annotation-edit';
 
-        // Replace box content with textarea
+        // Replace box content with textarea    
         boxElement.innerHTML = '';
         boxElement.appendChild(textarea);
         textarea.focus();
@@ -42,6 +42,7 @@ export function makeEditable(boxElement, annotationId, annotationData, onUpdate)
                     // Emit update to others via socket
                     socket.emit('update-annotation-text', {
                         _id: annotationData._id,
+                        annotationId: annotationData.annotationId,
                         newText
                     });
                 } catch (err) {
