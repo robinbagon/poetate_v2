@@ -98,6 +98,7 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
   if (loginBtn) loginBtn.addEventListener('click', () => window.location.href = '/login.html');
   if (registerBtn) registerBtn.addEventListener('click', () => window.location.href = '/register.html');
   if (logoutBtn) logoutBtn.addEventListener('click', async () => { await fetch('/api/auth/logout'); window.location.reload(); });
+  if (poemId) socket.emit('join-poem-room', poemId);
 
   await loadExistingAnnotations(poemId, readOnly);
 

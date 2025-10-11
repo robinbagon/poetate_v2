@@ -58,13 +58,47 @@ app.get('/annotation.html', (req, res) => res.sendFile(path.join(__dirname, 'pub
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  socket.on('new-annotation', (data) => socket.broadcast.emit('new-annotation', data));
-  socket.on('update-annotation-text', (data) => socket.broadcast.emit('update-annotation-text', data));
-  socket.on('update-annotation-position', (data) => socket.broadcast.emit('update-annotation-position', data));
-  socket.on('delete-annotation', (data) => socket.broadcast.emit('delete-annotation', data));
+  // When a client joins a poem page, they specify the poemId
+  socket.on('join-poem-room', (poemId) => {
+    if (poemId) {
+      socket.join(poemId);
+      console.log(`Socket ${socket.id} joined poem room: ${poemId}`);
+    }
+  });
 
-  socket.on('disconnect', () => console.log('A user disconnected'));
+  // Handle new annotation (only send to the same poem room)
+  socket.on('new-annotation', (data) => {
+    if (data.poemId) {
+      io.to(data.poemId).emit('new-annotation', data);
+    }
+  });
+
+  // Handle annotation text updates
+  socket.on('update-annotation-text', (data) => {
+    if (data.poemId) {
+      io.to(data.poemId).emit('update-annotation-text', data);
+    }
+  });
+
+  // Handle annotation position updates
+  socket.on('update-annotation-position', (data) => {
+    if (data.poemId) {
+      io.to(data.poemId).emit('update-annotation-position', data);
+    }
+  });
+
+  // Handle annotation deletions
+  socket.on('delete-annotation', (data) => {
+    if (data.poemId) {
+      io.to(data.poemId).emit('delete-annotation', data);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`Socket ${socket.id} disconnected`);
+  });
 });
+
 
 
 // Start server

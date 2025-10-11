@@ -28,6 +28,8 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
   const saveAnnotationButton = document.getElementById('saveAnnotation');
   const cancelAnnotationButton = document.getElementById('cancelAnnotation');
 
+  if (poemId) socket.emit('join-poem-room', poemId);
+
   await loadExistingAnnotations(poemId, readOnly);
 
   
