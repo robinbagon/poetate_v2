@@ -54,6 +54,36 @@ app.use('/api/poems', poemRoutes);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/annotation.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'annotation.html')));
 
+// --- Handle shared poem lookup ---
+const Poem = require('./models/Poem');
+const Annotation = require('./models/Annotation');
+
+app.get('/api/poems/shared/:shareId', async (req, res) => {
+  try {
+    const { shareId } = req.params;
+    const poem = await Poem.findOne({ 'shareLinks.id': shareId });
+    if (!poem) return res.status(404).json({ error: 'Poem not found' });
+
+    const link = poem.shareLinks.find(l => l.id === shareId);
+    const editable = link?.mode === 'editable';
+
+    const annotations = await Annotation.find({ poemId: poem._id });
+
+    res.json({
+      poem: {
+        _id: poem._id,
+        content: poem.content
+      },
+      annotations,
+      editable
+    });
+  } catch (err) {
+    console.error('Error fetching shared poem:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 // Socket.IO
 io.on('connection', (socket) => {
   console.log('A user connected');

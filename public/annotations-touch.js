@@ -136,7 +136,7 @@ saveAnnotationButton.addEventListener('click', async () => {
     wordIndices: [...modalSelectedSpanIndices],
     colorClass: highlightClass,
     timestamp: new Date().toISOString(),
-    poemId: new URLSearchParams(window.location.search).get('poemId') || null
+    poemId
   };
 
   try {

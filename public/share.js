@@ -17,7 +17,7 @@ if (!shareId) {
 
 async function loadSharedContent() {
   try {
-    const response = await fetch(`/api/shares/${shareId}`);
+    const response = await fetch(`/api/poems/shared/${shareId}`);
     if (!response.ok) throw new Error('Share not found');
 
     const { poem, annotations, editable } = await response.json(); // <- backend decides access

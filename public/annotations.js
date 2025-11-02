@@ -169,7 +169,7 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
             wordIndices: selectedSpanIndices,
             colorClass: highlightClass, // store class
             timestamp: new Date().toISOString(),
-            poemId: new URLSearchParams(window.location.search).get('poemId') || null
+            poemId
         };
 
         try {
