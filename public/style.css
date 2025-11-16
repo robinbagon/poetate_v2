@@ -569,3 +569,47 @@ h1, h2, p {
   pointer-events: none; /* prevents footer from interfering with clicks */
 }
 
+#modeSwitchContainer {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 3000;
+}
+
+#modeSwitch {
+  position: relative;
+  display: flex;
+  background: #e5e5e5;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  width: 240px;
+  height: 36px;
+  font-family: Inter, sans-serif;
+}
+
+#modeSwitch .option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: #555;
+  user-select: none;
+  position: relative;
+  z-index: 2;
+}
+
+#switchSelector {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(240px / 3);
+  height: 100%;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  transition: left 0.25s ease;
+  z-index: 1;
+}
