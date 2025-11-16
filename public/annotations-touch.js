@@ -297,7 +297,8 @@ if (!readOnly) {
     deleteAnnotationBox(annotationData.annotationId);
     socket.emit('delete-annotation', { 
       _id: annotationData._id,
-      annotationId: annotationData.annotationId
+      annotationId: annotationData.annotationId,
+      poemId: annotationData.poemId
     });
   }, LONG_PRESS_DELAY);
 });
@@ -460,10 +461,12 @@ async function updateAnnotationPosition(annotation) {
       body: JSON.stringify({ relativePosition: annotation.relativePosition })
     });
     socket.emit('update-annotation-position', {
-      _id: annotation._id,
-      annotationId: annotation.annotationId,
-      relativePosition: annotation.relativePosition
-    });
+  _id: annotation._id,
+  annotationId: annotation.annotationId,
+  relativePosition: annotation.relativePosition,
+  poemId: annotation.poemId   // ✔ FIXED
+});
+
   } catch (err) {
     console.error('Error updating annotation position:', err);
   }

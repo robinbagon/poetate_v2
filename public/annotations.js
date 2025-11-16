@@ -460,7 +460,8 @@ annotation.wordIndices.forEach(index => {
 
         socket.emit('delete-annotation', { 
             _id: annotationId,
-            annotationId: annotation.annotationId
+            annotationId: annotation.annotationId,
+            poemId: annotation.poemId
              });
     });
 
@@ -762,9 +763,11 @@ async function updateAnnotationPosition(annotation) {
         // 🔄 Notify other clients about the position update
 socket.emit('update-annotation-position', {
   _id: annotation._id,
-  annotationId: annotation.annotationId,   // <-- add this
-  relativePosition: annotation.relativePosition
+  annotationId: annotation.annotationId,
+  relativePosition: annotation.relativePosition,
+  poemId: annotation.poemId   // ✔ FIXED
 });
+
 
     } catch (err) {
         console.error('Error updating annotation position:', err);

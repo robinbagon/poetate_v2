@@ -7,9 +7,19 @@
   <link rel="stylesheet" href="style.css" />
   <script src="/socket.io/socket.io.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">  
 </head>
 <body>
+
+  <!-- ✅ Mode toggle (top-left) -->
+  <div id="modeSwitchContainer">
+  <div id="modeSwitch">
+    <div class="option" data-mode="auto">Auto</div>
+    <div class="option" data-mode="desktop">Desktop</div>
+    <div class="option" data-mode="touch">Touch</div>
+    <div id="switchSelector"></div>
+  </div>
+</div>
 
   <!-- ✅ Auth container (top-right bar) -->
   <div id="authStatus" class="auth-bar">loading</div>

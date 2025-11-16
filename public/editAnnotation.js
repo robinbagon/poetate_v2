@@ -43,7 +43,8 @@ export function makeEditable(boxElement, annotationId, annotationData, onUpdate)
                     socket.emit('update-annotation-text', {
                         _id: annotationData._id,
                         annotationId: annotationData.annotationId,
-                        newText
+                        newText,
+                        poemId: annotationData.poemId
                     });
                 } catch (err) {
                     console.error(err);
