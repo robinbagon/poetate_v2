@@ -4,53 +4,58 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Poem = require('../models/Poem');
 const crypto = require('crypto');
-const { Resend } = require('resend'); // 1. Import Resend
+const { Resend } = require('resend');
 
-// 2. Initialize Resend with your API Key from the .env file
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Register
-router.post('/register', async (req, res) => {
+// 1. LOGIN
+router.post('/login', async (req, res) => {
     const { email, password, pendingPoemId } = req.body;
-
     try {
-        const passwordHash = await bcrypt.hash(password, 10);
-        const user = new User({ email, passwordHash });
-        await user.save();
+        const user = await User.findOne({ email });
+        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
-        // --- 3. START EMAIL LOGIC ---
-        try {
-            await resend.emails.send({
-                from: 'Poetate <info@poetate.org>',
-                to: email,
-                subject: 'Welcome to Poetate!',
-                html: `
-                    <div style="font-family: sans-serif; color: #333;">
-                        <h2>Welcome to Poetate!</h2>
-                        <p>Your account has been created successfully.</p>
-                        <p>You can now save your poems, share them with the world, and join our creative community.</p>
-                        <hr />
-                        <p style="font-size: 0.8em; color: #666;">If you didn't create this account, please ignore this email.</p>
-                    </div>
-                `
-            });
-            console.log(`Welcome email sent to ${email}`);
-        } catch (mailError) {
-            // We log the error but don't stop the registration process 
-            // otherwise a user is registered but thinks they aren't.
-            console.error('Email failed to send:', mailError);
-        }
-        // --- END EMAIL LOGIC ---
+        const match = await bcrypt.compare(password, user.passwordHash);
+        if (!match) return res.status(400).json({ message: 'Invalid credentials' });
 
         req.session.userId = user._id;
 
         if (pendingPoemId) {
             await Poem.findOneAndUpdate(
-                { _id: pendingPoemId, userId: null }, 
+                { _id: pendingPoemId, userId: null },
                 { userId: user._id }
             );
         }
+        res.status(200).json({ message: 'Login successful' });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ message: 'Login failed' });
+    }
+});
 
+// 2. REGISTER
+router.post('/register', async (req, res) => {
+    const { email, password, pendingPoemId } = req.body;
+    try {
+        const passwordHash = await bcrypt.hash(password, 10);
+        const user = new User({ email, passwordHash });
+        await user.save();
+
+        try {
+            await resend.emails.send({
+                from: 'Poetate <info@poetate.org>',
+                to: email,
+                subject: 'Welcome to Poetate!',
+                html: `<h2>Welcome to Poetate!</h2><p>Your account has been created successfully.</p>`
+            });
+        } catch (mailError) {
+            console.error('Email failed to send:', mailError);
+        }
+
+        req.session.userId = user._id;
+        if (pendingPoemId) {
+            await Poem.findOneAndUpdate({ _id: pendingPoemId, userId: null }, { userId: user._id });
+        }
         res.status(201).json({ message: 'Registration successful' });
     } catch (err) {
         console.error('Registration error:', err);
@@ -58,76 +63,60 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Request Password Reset
+// 3. FORGOT PASSWORD
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-
     try {
         const user = await User.findOne({ email });
-        if (!user) {
-            // We say "email sent" even if user doesn't exist for security 
-            // so hackers can't "fish" for valid emails.
-            return res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
-        }
+        if (!user) return res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
 
-        // Create a unique token
         const token = crypto.randomBytes(20).toString('hex');
-
-        // Set token and expiration (1 hour from now)
         user.resetPasswordToken = token;
         user.resetPasswordExpires = Date.now() + 3600000; 
         await user.save();
 
         const resetUrl = `https://poetate.org/reset-password/${token}`;
-
         await resend.emails.send({
             from: 'Poetate <info@poetate.org>',
             to: user.email,
             subject: 'Poetate Password Reset',
-            html: `<p>You requested a password reset. Click the link below to set a new one:</p>
-                   <a href="${resetUrl}">${resetUrl}</a>
-                   <p>This link will expire in 1 hour.</p>`
+            html: `<p>Click below to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`
         });
-
         res.status(200).json({ message: 'Reset email sent' });
     } catch (err) {
         res.status(500).json({ message: 'Error sending reset email' });
     }
 });
 
+// 4. RESET PASSWORD (SAVING)
 router.post('/reset-password/:token', async (req, res) => {
     const { password } = req.body;
     const { token } = req.params;
-
     try {
-        // Find user with valid token that hasn't expired
         const user = await User.findOne({
             resetPasswordToken: token,
             resetPasswordExpires: { $gt: Date.now() }
         });
+        if (!user) return res.status(400).json({ message: 'Token invalid or expired.' });
 
-        if (!user) {
-            return res.status(400).json({ message: 'Password reset token is invalid or has expired.' });
-        }
-
-        // Hash the new password
         const salt = await bcrypt.genSalt(10);
         user.passwordHash = await bcrypt.hash(password, salt);
-
-        // Clear reset fields
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
-
         await user.save();
 
         res.status(200).json({ message: 'Password has been reset successfully.' });
     } catch (err) {
-        console.error('Reset password error:', err);
-        res.status(500).json({ message: 'Server error during password reset.' });
+        res.status(500).json({ message: 'Server error during reset.' });
     }
 });
 
-router.post('/login', async (req, res) => { /* ... */ });
-router.post('/logout', (req, res) => { /* ... */ });
+// 5. LOGOUT
+router.post('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.status(200).json({ message: 'Logged out' });
+    });
+});
 
 module.exports = router;
