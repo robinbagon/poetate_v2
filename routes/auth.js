@@ -111,6 +111,25 @@ router.post('/reset-password/:token', async (req, res) => {
     }
 });
 
+// Get current logged-in user data
+router.get('/user', async (req, res) => {
+    try {
+        if (!req.session.userId) {
+            return res.status(401).json({ message: 'Not logged in' });
+        }
+
+        const user = await User.findById(req.session.userId).select('-passwordHash');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json(user);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // 5. LOGOUT
 router.post('/logout', (req, res) => {
     req.session.destroy(() => {
