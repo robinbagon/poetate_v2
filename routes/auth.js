@@ -1,13 +1,16 @@
-// routes/auth.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const Poem = require('../models/Poem'); // ✅ 1. Import the Poem model
+const Poem = require('../models/Poem');
+const crypto = require('crypto');
+const { Resend } = require('resend'); // 1. Import Resend
+
+// 2. Initialize Resend with your API Key from the .env file
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Register
 router.post('/register', async (req, res) => {
-    // ✅ 2. Destructure pendingPoemId from request body
     const { email, password, pendingPoemId } = req.body;
 
     try {
@@ -15,9 +18,32 @@ router.post('/register', async (req, res) => {
         const user = new User({ email, passwordHash });
         await user.save();
 
+        // --- 3. START EMAIL LOGIC ---
+        try {
+            await resend.emails.send({
+                from: 'Poetate <info@poetate.org>',
+                to: email,
+                subject: 'Welcome to Poetate!',
+                html: `
+                    <div style="font-family: sans-serif; color: #333;">
+                        <h2>Welcome to Poetate!</h2>
+                        <p>Your account has been created successfully.</p>
+                        <p>You can now save your poems, share them with the world, and join our creative community.</p>
+                        <hr />
+                        <p style="font-size: 0.8em; color: #666;">If you didn't create this account, please ignore this email.</p>
+                    </div>
+                `
+            });
+            console.log(`Welcome email sent to ${email}`);
+        } catch (mailError) {
+            // We log the error but don't stop the registration process 
+            // otherwise a user is registered but thinks they aren't.
+            console.error('Email failed to send:', mailError);
+        }
+        // --- END EMAIL LOGIC ---
+
         req.session.userId = user._id;
 
-        // ✅ 3. Claim anonymous poem if it exists
         if (pendingPoemId) {
             await Poem.findOneAndUpdate(
                 { _id: pendingPoemId, userId: null }, 
@@ -32,60 +58,41 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
-router.post('/login', async (req, res) => {
-    // ✅ 4. Destructure pendingPoemId from request body
-    const { email, password, pendingPoemId } = req.body;
+// Request Password Reset
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
 
     try {
         const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-
-        const match = await bcrypt.compare(password, user.passwordHash);
-        if (!match) return res.status(400).json({ message: 'Invalid credentials' });
-
-        req.session.userId = user._id;
-
-        // ✅ 5. Claim anonymous poem if it exists
-        if (pendingPoemId) {
-            await Poem.findOneAndUpdate(
-                { _id: pendingPoemId, userId: null },
-                { userId: user._id }
-            );
-        }
-
-        res.status(200).json({ message: 'Login successful' });
-    } catch (err) {
-        console.error('Login error:', err);
-        res.status(500).json({ message: 'Login failed' });
-    }
-});
-
-// Get current logged-in user
-router.get('/user', async (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ message: 'Not logged in' });
-    }
-
-    try {
-        const user = await User.findById(req.session.userId).select('-passwordHash');
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            // We say "email sent" even if user doesn't exist for security 
+            // so hackers can't "fish" for valid emails.
+            return res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
         }
 
-        res.status(200).json(user);
-    } catch (err) {
-        console.error('Error fetching user:', err);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
+        // Create a unique token
+        const token = crypto.randomBytes(20).toString('hex');
 
-// Logout
-router.post('/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.clearCookie('connect.sid');
-        res.status(200).json({ message: 'Logged out' });
-    });
+        // Set token and expiration (1 hour from now)
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000; 
+        await user.save();
+
+        const resetUrl = `https://poetate.org/reset-password/${token}`;
+
+        await resend.emails.send({
+            from: 'Poetate <info@poetate.org>',
+            to: user.email,
+            subject: 'Poetate Password Reset',
+            html: `<p>You requested a password reset. Click the link below to set a new one:</p>
+                   <a href="${resetUrl}">${resetUrl}</a>
+                   <p>This link will expire in 1 hour.</p>`
+        });
+
+        res.status(200).json({ message: 'Reset email sent' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error sending reset email' });
+    }
 });
 
 module.exports = router;

@@ -25,7 +25,9 @@ const userSchema = new mongoose.Schema({
   subscriptionExpiry: {
     type: Date,
     default: null // null means no expiry (free tier or not yet set)
-  }
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 });
 
 userSchema.methods.validatePassword = function(password) {

@@ -17,6 +17,7 @@
     "express": "^4.21.1",
     "express-session": "^1.18.1",
     "mongoose": "^8.8.0",
+    "resend": "^6.9.2",
     "socket.io": "^4.8.1",
     "uuid": "^11.1.0"
   }

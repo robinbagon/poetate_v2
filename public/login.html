@@ -1,20 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Login</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Poetate</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <h1>Login</h1>
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required />
-    <input type="password" id="password" placeholder="Password" required />
-    <button type="submit">Login</button>
-  </form>
-  <p id="loginMsg"></p>
+<body class="auth-page-body">
 
-  <!-- Use regular script unless you're using modules and a bundler -->
-  <script src="./login.js"></script>
+    <div class="reset-container">
+        <h1>Login</h1>
+        <p style="color: #666;">Welcome back to Poetate.</p>
+
+        <form id="loginForm" class="reset-form">
+            <input type="email" id="email" placeholder="Email" required />
+            <input type="password" id="password" placeholder="Password" required />
+            
+            <button type="submit" class="reset-button">Login</button>
+            
+            <div style="margin-top: 5px;">
+                <a href="#" id="forgotPasswordLink" style="font-size: 0.85em; color: #666; text-decoration: none;">Forgot Password?</a>
+            </div>
+        </form>
+
+        <p id="loginMsg"></p>
+        
+        <p style="margin-top: 20px; font-size: 0.9em;">
+            Don't have an account? <a href="/register.html" style="color: #000; font-weight: bold;">Sign Up</a>
+        </p>
+    </div>
+
+    <script src="./login.js"></script>
 </body>
 </html>
