@@ -12,7 +12,7 @@ const server = http.createServer(app);
 // Socket.IO configuration
 const io = new Server(server, {
   cors: {
-    origin: ['https://poetate.onrender.com', 'http://localhost:5000', 'https://poetate.org', 'www.poetate.org'],
+    origin: ['https://poetate.onrender.com', 'http://localhost:5000', 'https://poetate.org', 'https://www.poetate.org'],
     methods: ['GET', 'POST']
   }
 });
@@ -26,10 +26,6 @@ mongoose.connect(process.env.MONGODB_URI)
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/reset-password/:token', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
-});
 
 // Session middleware
 app.use(session({
@@ -53,6 +49,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/annotations', annotationsRouter);
 app.use('/api/poems', poemRoutes);
 app.use('/api/shares', shareRoutes);
+
+app.get('/reset-password/:token', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
 
 // Socket.IO Logic (Moved to bottom for clarity)
 io.on('connection', (socket) => {
