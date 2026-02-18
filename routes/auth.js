@@ -3,17 +3,28 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Poem = require('../models/Poem'); // ✅ 1. Import the Poem model
 
 // Register
 router.post('/register', async (req, res) => {
-    const { email, password } = req.body;
+    // ✅ 2. Destructure pendingPoemId from request body
+    const { email, password, pendingPoemId } = req.body;
 
     try {
-        const passwordHash = await bcrypt.hash(password, 10); // ✅ use correct field name
-        const user = new User({ email, passwordHash });       // ✅ store in passwordHash
+        const passwordHash = await bcrypt.hash(password, 10);
+        const user = new User({ email, passwordHash });
         await user.save();
 
         req.session.userId = user._id;
+
+        // ✅ 3. Claim anonymous poem if it exists
+        if (pendingPoemId) {
+            await Poem.findOneAndUpdate(
+                { _id: pendingPoemId, userId: null }, 
+                { userId: user._id }
+            );
+        }
+
         res.status(201).json({ message: 'Registration successful' });
     } catch (err) {
         console.error('Registration error:', err);
@@ -23,16 +34,26 @@ router.post('/register', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    // ✅ 4. Destructure pendingPoemId from request body
+    const { email, password, pendingPoemId } = req.body;
 
     try {
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
-        const match = await bcrypt.compare(password, user.passwordHash); // ✅ compare with passwordHash
+        const match = await bcrypt.compare(password, user.passwordHash);
         if (!match) return res.status(400).json({ message: 'Invalid credentials' });
 
         req.session.userId = user._id;
+
+        // ✅ 5. Claim anonymous poem if it exists
+        if (pendingPoemId) {
+            await Poem.findOneAndUpdate(
+                { _id: pendingPoemId, userId: null },
+                { userId: user._id }
+            );
+        }
+
         res.status(200).json({ message: 'Login successful' });
     } catch (err) {
         console.error('Login error:', err);

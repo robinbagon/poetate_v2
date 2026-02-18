@@ -4,15 +4,23 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
+    // 📥 Grab the pending poem ID if it exists in this browser
+    const pendingPoemId = localStorage.getItem('pendingPoemId');
+
     try {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ email, password })
+            // ✅ Send the ID to the backend along with credentials
+            body: JSON.stringify({ email, password, pendingPoemId })
         });
 
         if (response.ok) {
+            // ✨ Success! Remove the pending ID from memory
+            if (pendingPoemId) {
+                localStorage.removeItem('pendingPoemId');
+            }
             window.location.href = '/dashboard.html';
         } else {
             const data = await response.json();

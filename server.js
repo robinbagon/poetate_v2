@@ -8,36 +8,33 @@ const session = require('express-session');
 
 const app = express();
 const server = http.createServer(app);
+
+// Socket.IO configuration
 const io = new Server(server, {
   cors: {
-    origin: ['https://poetate.onrender.com', 'http://localhost:5000', 'http://192.168.25.119:5000', 'https:///poetate.org'], // allows all origins
+    origin: ['https://poetate.onrender.com', 'http://localhost:5000', 'https://poetate.org'],
     methods: ['GET', 'POST']
   }
 });
 
-// MongoDB connection
+// MongoDB connection - simplified now that we know it works
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('Failed to connect to MongoDB:', error));
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB Connection Error:', err.message));
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/socket.io', express.static('node_modules/socket.io/client-dist'));
-
-const shareRoutes = require('./routes/shares');
-app.use('/api/shares', shareRoutes);
-
 
 // Session middleware
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'Ahr%$Okk54stQQ',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24
+    maxAge: 1000 * 60 * 60 * 24 // 24 hours
   }
 }));
 
@@ -45,94 +42,44 @@ app.use(session({
 const authRoutes = require('./routes/auth');
 const annotationsRouter = require('./routes/annotations');
 const poemRoutes = require('./routes/poem');
+const shareRoutes = require('./routes/shares'); // Moved all share logic here
 
 app.use('/api/auth', authRoutes);
 app.use('/api/annotations', annotationsRouter);
 app.use('/api/poems', poemRoutes);
+app.use('/api/shares', shareRoutes);
 
-// Serve HTML pages
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/annotation.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'annotation.html')));
-
-// --- Handle shared poem lookup ---
-const Poem = require('./models/Poem');
-const Annotation = require('./models/Annotation');
-
-app.get('/api/poems/shared/:shareId', async (req, res) => {
-  try {
-    const { shareId } = req.params;
-    const poem = await Poem.findOne({ 'shareLinks.id': shareId });
-    if (!poem) return res.status(404).json({ error: 'Poem not found' });
-
-    const link = poem.shareLinks.find(l => l.id === shareId);
-    const editable = link?.mode === 'editable';
-
-    const annotations = await Annotation.find({ poemId: poem._id });
-
-    res.json({
-      poem: {
-        _id: poem._id,
-        content: poem.content
-      },
-      annotations,
-      editable
-    });
-  } catch (err) {
-    console.error('Error fetching shared poem:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-
-// Socket.IO
+// Socket.IO Logic (Moved to bottom for clarity)
 io.on('connection', (socket) => {
-  console.log('A user connected');
+  console.log('🔌 New connection:', socket.id);
 
-  // When a client joins a poem page, they specify the poemId
   socket.on('join-poem-room', (poemId) => {
     if (poemId) {
       socket.join(poemId);
-      console.log(`Socket ${socket.id} joined poem room: ${poemId}`);
+      console.log(`👥 Socket ${socket.id} joined room: ${poemId}`);
     }
   });
 
-  // Handle new annotation (only send to the same poem room)
-  socket.on('new-annotation', (data) => {
+  // Re-usable emitter that BROADCASTS to everyone in the room EXCEPT the sender
+  const handleBroadcast = (event, data) => {
     if (data.poemId) {
-      io.to(data.poemId).emit('new-annotation', data);
+      // socket.to() sends to the room excluding the current socket
+      socket.to(data.poemId).emit(event, data);
     }
-  });
+  };
 
-  // Handle annotation text updates
-  socket.on('update-annotation-text', (data) => {
-    if (data.poemId) {
-      io.to(data.poemId).emit('update-annotation-text', data);
-    }
-  });
-
-  // Handle annotation position updates
-  socket.on('update-annotation-position', (data) => {
-    if (data.poemId) {
-      io.to(data.poemId).emit('update-annotation-position', data);
-    }
-  });
-
-  // Handle annotation deletions
-  socket.on('delete-annotation', (data) => {
-    if (data.poemId) {
-      io.to(data.poemId).emit('delete-annotation', data);
-    }
-  });
+  // Ensure these all call handleBroadcast
+  socket.on('new-annotation', (data) => handleBroadcast('new-annotation', data));
+  socket.on('update-annotation-text', (data) => handleBroadcast('update-annotation-text', data));
+  socket.on('update-annotation-position', (data) => handleBroadcast('update-annotation-position', data));
+  socket.on('delete-annotation', (data) => handleBroadcast('delete-annotation', data));
 
   socket.on('disconnect', () => {
-    console.log(`Socket ${socket.id} disconnected`);
+    console.log('🔌 User disconnected');
   });
 });
 
-
-
-// Start server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running at http://0.0.0.0:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });

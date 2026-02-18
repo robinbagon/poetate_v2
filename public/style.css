@@ -39,15 +39,6 @@ h1, h2, p {
     mix-blend-mode: multiply;
 }
 
-/* Highlighted word */
-/*.poem-word.highlighted {
-    background-color: rgba(255, 255, 0, 0.4);
-    padding-left: 3px;
-    padding-right: 3px;
-    box-shadow: 0 0 2px rgba(0,0,0,0.2);
-    cursor: pointer;
-}*/
-
 .poem-word.highlighted {
   mix-blend-mode: multiply;
 }
@@ -81,30 +72,6 @@ h1, h2, p {
     padding-left: 3px;
     padding-right: 3px;
 }
-
-
-/* Hovered word */
-/*.poem-word.hovered {
-    background-color: rgba(255, 180, 0, 0.6);
-    cursor: pointer;
-}*/
-
-/* Annotation modal */
-/*.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;   
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    backdrop-filter: blur(4px);
-    background-color: rgba(0, 0, 0, 0.1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}*/
 
 .modal-content {
     background-color: white;
@@ -156,16 +123,11 @@ h1, h2, p {
     max-width: 300px;   
 }
 
-.annotation-box.active {
-  
-}
-
 /* Annotation box glow on hover */
 .annotation-box.hovered {
    border: 2px solid orange;
     /*background: #fffbe6;*/
    background: #ffffff;
-
 }
 
 #annotation-lines {
@@ -238,33 +200,6 @@ h1, h2, p {
     margin-left: 6px;
 }
 
-/* #addPoemButton {
-  margin-top: 15px;
-  padding: 10px 16px;
-  font-size: 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-#addPoemButton:hover {
-  background-color: #0056b3;
-}
-
-/*#logoutButton {
-  margin-top: 10px;
-  margin-bottom: 20px;
-  padding: 10px 16px;
-  font-size: 16px;
-  background-color: #dc3545; /* Bootstrap-style red */
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer; */
-}
-
 #logoutButton:hover {
   background-color: #b02a37;
 }
@@ -272,14 +207,17 @@ h1, h2, p {
 
 /* Top-right auth bar */
 .auth-bar {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: 'Arial', sans-serif;
-  font-size: 0.95em;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 5px 15px;
+    border-radius: 20px;
+    z-index: 1000; /* Ensure it stays above the SVG lines */
 }
 
 .auth-bar span {
@@ -588,7 +526,8 @@ h1, h2, p {
   font-family: Inter, sans-serif;
 }
 
-#modeSwitch .option {
+/* Updated class name to match your main.js code */
+#modeSwitch .mode-option {
   flex: 1;
   display: flex;
   align-items: center;
@@ -599,17 +538,90 @@ h1, h2, p {
   user-select: none;
   position: relative;
   z-index: 2;
+  /* Reset button styles if you use button tags */
+  border: none;
+  background: transparent;
 }
 
 #switchSelector {
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(240px / 3);
+  width: calc(100% / 3); /* Use percentage for cleaner calc */
   height: 100%;
   background: white;
   border-radius: 10px;
   box-shadow: 0 0 4px rgba(0,0,0,0.2);
   transition: left 0.25s ease;
   z-index: 1;
+}
+
+.annotation-line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1.5;
+    stroke-dasharray: 2 6;
+    transition: stroke 0.3s ease, stroke-width 0.3s ease;
+    pointer-events: none; /* Prevents the line from blocking clicks/drags */
+}
+
+.annotation-line.hovered {
+    stroke: orange;
+    stroke-width: 2.5;
+    stroke-dasharray: none; /* Makes the line solid on hover */
+}
+
+/* Floating Annotate Button */
+.annotate-floating-btn {
+    position: absolute;
+    display: none; /* Hidden by default */
+    z-index: 9999;
+    
+    /* Colors & Typography */
+    background-color: #85e085;
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 20px;
+    
+    /* Layout */
+    padding: 12px 18px;
+    min-width: 90px;
+    height: 44px; /* Optimal touch target size */
+    
+    /* Border & Shadow */
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    
+    /* Prevent text selection on the button itself */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Feedback when tapped */
+.annotate-floating-btn:active {
+    background-color: #6bc96b;
+    transform: scale(0.98);
+}
+
+.annotation-box {
+  /* ... your existing styles ... */
+  touch-action: none;       /* Stops browser-level scrolling when touching the box */
+  will-change: left, top;   /* Optimizes performance for moving elements */
+  user-select: none;        /* Prevents accidental text selection while dragging */
+}
+
+.custom-rename-btn {
+  background: url('/images/rename.svg') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.custom-rename-btn:hover {
+  opacity: 1;
 }

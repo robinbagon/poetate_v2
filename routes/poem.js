@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
 
     const poem = new Poem({
       content,
+      title: content.split('\n')[0].substring(0, 50),
       userId: user ? user._id : null // allow anonymous submission
     });
 
@@ -99,6 +100,30 @@ router.get('/usage', async (req, res) => {
   } catch (err) {
     console.error('Error fetching usage:', err);
     res.status(500).json({ message: 'Failed to fetch usage info' });
+  }
+});
+
+// GET /api/poems/shared-with-me
+router.get('/shared-with-me', async (req, res) => {
+  try {
+    // 1. Check if session exists
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const userId = req.session.userId;
+
+    // 2. Find poems where the user is in the collaborators list
+    // Use $in to ensure we are searching the array correctly
+    const sharedPoems = await Poem.find({ 
+      collaborators: { $in: [userId] } 
+    });
+
+    res.json(sharedPoems);
+  } catch (err) {
+    // This logs the ACTUAL error to your terminal/command prompt
+    console.error('SERVER ERROR IN SHARED-WITH-ME:', err);
+    res.status(500).json({ message: 'Server error fetching shared poems', error: err.message });
   }
 });
 
@@ -162,6 +187,33 @@ router.post('/:id/share', ensureAuthenticated, async (req, res) => {
   } catch (err) {
     console.error('Error creating share link:', err);
     res.status(500).json({ message: 'Could not create share link' });
+  }
+});
+
+// ✅ RENAME a poem
+router.patch('/:id', ensureAuthenticated, async (req, res) => {
+  const { title } = req.body;
+
+  if (title === undefined) {
+    return res.status(400).json({ message: 'Title is required' });
+  }
+
+  try {
+    // Find by ID AND userId to ensure ownership
+    const poem = await Poem.findOneAndUpdate(
+      { _id: req.params.id, userId: req.session.userId },
+      { title: title },
+      { new: true } // returns the updated document
+    );
+
+    if (!poem) {
+      return res.status(404).json({ message: 'Poem not found or unauthorized' });
+    }
+
+    res.json(poem);
+  } catch (err) {
+    console.error('Error renaming poem:', err);
+    res.status(500).json({ message: 'Failed to rename poem' });
   }
 });
 

@@ -1,92 +1,89 @@
 // main.js
 import { renderPoem } from './renderPoem.js';
+import { authUI } from './authUI.js'; //
 
 async function loadPoemAndRender() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const poemId = urlParams.get('poemId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const poemId = urlParams.get('poemId');
 
-  if (!poemId) {
-    console.error('No poem ID found in URL.');
-    return;
-  }
+    authUI.init();
 
-  try {
-    const response = await fetch(`/api/poems/${poemId}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch poem: ${response.statusText}`);
+    if (!poemId) {
+        console.error('No poem ID found in URL.');
+        document.getElementById('poemContent').innerText = "Poem ID missing.";
+        return;
     }
 
-    const poem = await response.json();
-    renderPoem(poem.content); // Render the poem first
+    try {
+        // 1. Fetch Poem Data
+        const response = await fetch(`/api/poems/${poemId}`);
+        if (!response.ok) throw new Error(`Failed to fetch poem: ${response.statusText}`);
 
-    // ------------------------------
-    // DEVICE MODE SELECTION LOGIC
-    // ------------------------------
+        const poem = await response.json();
+        renderPoem(poem.content); 
 
-    // 1. Check if user has forced desktop/touch mode
-    const forcedMode = localStorage.getItem("forceMode");
+        /// 2. Device Mode Logic
+        const forcedMode = localStorage.getItem("forceMode");
+        let isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
-    // 2. Default automatic detection
-    let isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+        // Override auto-detection if a specific mode is forced
+        if (forcedMode === "desktop") {
+            isTouchDevice = false;
+        } else if (forcedMode === "touch") {
+            isTouchDevice = true;
+        }
 
-    // 3. Apply override if present
-    if (forcedMode === "desktop") isTouchDevice = false;
-    if (forcedMode === "touch") isTouchDevice = true;
+        // 3. Dynamic Module Loading
+        const modulePath = isTouchDevice ? './annotations-touch.js' : './annotations.js';
+        console.log(`Mode: ${forcedMode || 'auto'} | Loading: ${modulePath}`);
 
-    // 4. Load appropriate module
-    if (isTouchDevice) {
-      const module = await import('./annotations-touch.js');
-      await module.initAnnotations({ poemId });
-    } else {
-      const module = await import('./annotations.js');
-      await module.initAnnotations({ poemId });
+
+        
+        try {
+            const module = await import(modulePath);
+            // Ensure the imported module has an initAnnotations function
+            if (module.initAnnotations) {
+                await module.initAnnotations({ poemId });
+            }
+        } catch (importErr) {
+            console.error(`Failed to load module: ${modulePath}`, importErr);
+        }
+
+    } catch (error) {
+        console.error('Error loading poem:', error.message);
     }
-
-  } catch (error) {
-    console.error('Error loading poem:', error.message);
-  }
 }
 
-// Run on page load
+// Execute logic
 loadPoemAndRender();
 
-
 // ============================================
-// DEVICE MODE TOGGLE BUTTON
+// UI Switch Logic (Kept outside for DOM access)
 // ============================================
-
-// ===== THREE-WAY MODE SWITCH =====
 document.addEventListener("DOMContentLoaded", () => {
-  const switchSelector = document.getElementById("switchSelector");
-  const options = document.querySelectorAll("#modeSwitch .option");
+    const switchSelector = document.getElementById("switchSelector");
+    const options = document.querySelectorAll(".mode-option"); // Using class for safety
 
-  if (!switchSelector || !options.length) return;
+    if (!switchSelector || !options.length) return;
 
-  const setSwitchPosition = () => {
-    const forced = localStorage.getItem("forceMode");
+    const setSwitchPosition = () => {
+        const forced = localStorage.getItem("forceMode");
+        let index = 0; // Auto
+        if (forced === "desktop") index = 1;
+        if (forced === "touch") index = 2;
+        switchSelector.style.left = `calc((100% / 3) * ${index})`;
+    };
 
-    let index = 0; // Auto
-    if (forced === "desktop") index = 1;
-    if (forced === "touch") index = 2;
-
-    switchSelector.style.left = `calc((240px / 3) * ${index})`;
-  };
-
-  options.forEach(option => {
-    option.addEventListener("click", () => {
-      const mode = option.dataset.mode;
-
-      if (mode === "auto") {
-        localStorage.removeItem("forceMode");
-      } else {
-        localStorage.setItem("forceMode", mode);
-      }
-
-      setSwitchPosition();
-
-      setTimeout(() => location.reload(), 150);
+    options.forEach(option => {
+        option.addEventListener("click", () => {
+            const mode = option.dataset.mode;
+            if (mode === "auto") localStorage.removeItem("forceMode");
+            else localStorage.setItem("forceMode", mode);
+            
+            setSwitchPosition();
+            setTimeout(() => location.reload(), 150);
+        });
     });
-  });
 
-  setSwitchPosition();
+    setSwitchPosition();
 });

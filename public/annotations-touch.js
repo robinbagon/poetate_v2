@@ -1,9 +1,8 @@
 // annotations-touch.js
 
-import { saveAnnotation } from './saveAnnotation.js';
 import { drawLine, redrawAllLines } from './lines.js';
 import { makeEditable } from './editAnnotation.js';
-import { deleteAnnotation } from './deleteAnnotation.js';
+import { annotationService } from './annotationService.js';
 import socket from './socket.js';
 
 const annotationBoxes = new Map();
@@ -29,47 +28,78 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
   const cancelAnnotationButton = document.getElementById('cancelAnnotation');
 
   if (poemId) socket.emit('join-poem-room', poemId);
-
   await loadExistingAnnotations(poemId, readOnly);
-
-  
-
-
-// Prevent native context menu
-document.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-});
 
 // Create a floating "Annotate" button
 const annotateButton = document.createElement('button');
 annotateButton.innerText = 'Annotate';
-annotateButton.style.color = 'white';
-annotateButton.style.fontSize = '20px';        // bigger text
-annotateButton.style.fontWeight = '600';
-annotateButton.style.padding = '12px 18px';   // larger hit area
-annotateButton.style.minWidth = '90px';
-annotateButton.style.height = '44px';         // recommended touch target
-annotateButton.style.lineHeight = '20px';  
-annotateButton.style.position = 'absolute';
-annotateButton.style.display = 'none';
-annotateButton.style.zIndex = 9999;
-annotateButton.style.padding = '5px 10px';
-annotateButton.style.background = '#85e085';
-annotateButton.style.border = '1px solid #aaa';
-annotateButton.style.borderRadius = '4px';
+annotateButton.className = 'annotate-floating-btn';
 document.body.appendChild(annotateButton);
+
+// Dismiss button when touching elsewhere
+document.addEventListener('touchstart', (e) => {
+    // If we touched the Annotate button, let it do its job (don't hide)
+    if (e.target === annotateButton) return;
+
+    // If we touched a poem word, the long-press/selection logic handles it
+    if (e.target.closest('.poem-word')) return;
+
+    // Otherwise, the user touched the background or another element
+    annotateButton.style.display = 'none';
+    selectedSpanIndices = [];
+    
+    // Optional: Clear the blue native selection highlight too
+    window.getSelection().removeAllRanges();
+});
 
 // Snapshot of selected spans for modal
 let modalSelectedSpanIndices = [];
+let pressTimer;
+const LONG_PRESS_DELAY = 500; 
 
-// Show the button when native selection occurs
-document.addEventListener('selectionchange', () => {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) {
-    annotateButton.style.display = 'none';
-    selectedSpanIndices = [];
-    return;
-  }
+  poemContent.addEventListener('touchstart', (e) => {
+    const span = e.target.closest('.poem-word');
+    if (!span || readOnly) return;
+
+    // Clear any existing timer to avoid double-triggers
+    clearTimeout(pressTimer);
+
+    pressTimer = setTimeout(() => {
+      // 1. Manually select the word for visual feedback
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // 2. Update our tracking indices
+      selectedSpanIndices = [parseInt(span.dataset.wordIndex)];
+
+      // 3. Position and show the Annotate button
+      const rect = span.getBoundingClientRect();
+      annotateButton.style.top = `${rect.top - 50 + window.scrollY}px`; // Pop up above word
+      annotateButton.style.left = `${rect.left + window.scrollX}px`;
+      annotateButton.style.display = 'block';
+
+      // Optional: Haptic feedback for "it worked"
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, LONG_PRESS_DELAY);
+  });
+
+  // If the user moves their finger (scrolling) or lifts it, cancel the long-press
+  poemContent.addEventListener('touchmove', () => clearTimeout(pressTimer));
+  poemContent.addEventListener('touchend', () => clearTimeout(pressTimer));
+  // --- NEW LONG PRESS LOGIC END ---
+
+  // Keep your 'selectionchange' listener as a backup for when users 
+  // drag the blue native selection handles:
+  document.addEventListener('selectionchange', () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      // Don't hide the button immediately if it was just shown by long-press
+      return; 
+    }
+
 
   const range = selection.getRangeAt(0);
   const selectedSpans = Array.from(poemContent.querySelectorAll('.poem-word')).filter(span => {
@@ -117,64 +147,57 @@ annotateButton.addEventListener('click', () => {
   annotateButton.style.display = 'none';
 });
 
-// Save annotation using the modal-level snapshot
+
 // Save annotation using the modal-level snapshot
 saveAnnotationButton.addEventListener('click', async () => {
   if (readOnly) return;
 
   const text = annotationText.value.trim();
+  // Use the modal snapshot we took when the "Annotate" button was clicked
   if (!text || modalSelectedSpanIndices.length === 0) return;
 
   const highlightClass = getNextHighlightClass();
   const annotationId = 'ann-' + Math.random().toString(36).substr(2, 9);
 
-  // Build annotationData
   const annotationData = {
-    _id: null, // will be patched after saving
     annotationId,
     text,
     wordIndices: [...modalSelectedSpanIndices],
     colorClass: highlightClass,
-    timestamp: new Date().toISOString(),
     poemId
   };
 
   try {
-    // Save to server — must return a Mongo _id
-    const saved = await saveAnnotation(annotationData);
-    if (!saved || !saved._id) throw new Error('No _id returned from server');
+    // 1. Save to Database via Service
+    const saved = await annotationService.save(annotationData);
+    if (!saved || !saved._id) throw new Error('No _id returned');
 
-    // Patch the same object with the new _id
+    // 2. Attach the Database ID
     annotationData._id = saved._id;
 
-    // Store in maps
+    // 3. Update local UI
     annotationsMap.set(annotationData.annotationId, annotationData);
-
-    // Apply highlight to selected spans
     modalSelectedSpanIndices.forEach(index => {
       const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
       if (span) {
         span.dataset.annotationId = annotationData.annotationId;
         span.classList.add('highlight', highlightClass);
-        span.dataset.annotationClass = highlightClass;
-        span.title = annotationData.text;
       }
     });
 
-    // Render the annotation box only after _id is set
     renderAnnotationBox(annotationData, readOnly, highlightClass);
 
-    // Clear modal and reset selections
-    annotationText.value = '';
-    annotationModal.style.display = 'none';
-    selectedSpanIndices = [];
-    modalSelectedSpanIndices = [];
-
-    // Emit new annotation via socket (include both IDs)
+    // 4. THE MISSING LINK: Broadcast to other devices
     socket.emit('new-annotation', annotationData);
 
+    // 5. Cleanup
+    annotationText.value = '';
+    annotationModal.style.display = 'none';
+    modalSelectedSpanIndices = [];
+    selectedSpanIndices = [];
+
   } catch (err) {
-    console.error('Failed to save annotation:', err);
+    console.error('Failed to save and broadcast:', err);
     alert('Failed to save annotation.');
   }
 });
@@ -278,20 +301,24 @@ if (!readOnly) {
 
   box.addEventListener('touchstart', e => {
   if (e.touches.length > 1) return;
-  e.preventDefault();
-
-  startX = e.touches[0].pageX;   // ✅ use pageX/pageY
+  
+  startX = e.touches[0].pageX;
   startY = e.touches[0].pageY;
   boxStartX = box.offsetLeft;
   boxStartY = box.offsetTop;
   isDragging = false;
 
-  // Start long press timer
   pressTimer = setTimeout(async () => {
+    // Only prevent default if we actually trigger the long-press delete
+    e.preventDefault(); 
     if (!annotationData.annotationId) return;
     if (!confirm('Delete this annotation?')) return;
 
-    const success = await deleteAnnotation(annotationData._id);
+    const success = await annotationService.delete(
+    annotationData._id, 
+    annotationData.annotationId, 
+    annotationData.poemId
+);
     if (!success) return;
 
     deleteAnnotationBox(annotationData.annotationId);
@@ -305,6 +332,8 @@ if (!readOnly) {
 
 box.addEventListener('touchmove', e => {
   if (startX === null) return;
+
+  if (e.cancelable) e.preventDefault();
 
   const dx = e.touches[0].pageX - startX;   // ✅ pageX/pageY
   const dy = e.touches[0].pageY - startY;
@@ -328,7 +357,9 @@ box.addEventListener('touchmove', e => {
     const newLine = drawLine(data.targetSpan, box, annotationData.annotationId);
     annotationBoxes.set(annotationData.annotationId, { ...data, line: newLine });
   }
-});
+
+}, { passive: false });
+
 
 box.addEventListener('touchend', async e => {
   clearTimeout(pressTimer);
@@ -342,7 +373,7 @@ box.addEventListener('touchend', async e => {
         dx: box.offsetLeft - (spanRect.left + window.scrollX),
         dy: box.offsetTop - (spanRect.top + window.scrollY)
       };
-      updateAnnotationPosition(annotationData);
+      annotationService.updatePosition(annotationData);
     }
   }
 
@@ -450,25 +481,6 @@ async function loadExistingAnnotations(poemId = null, readOnly = false) {
     }
   } catch (err) {
     console.error('Error loading annotations:', err);
-  }
-}
-
-async function updateAnnotationPosition(annotation) {
-  try {
-    await fetch(`/api/annotations/${annotation._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ relativePosition: annotation.relativePosition })
-    });
-    socket.emit('update-annotation-position', {
-  _id: annotation._id,
-  annotationId: annotation.annotationId,
-  relativePosition: annotation.relativePosition,
-  poemId: annotation.poemId   // ✔ FIXED
-});
-
-  } catch (err) {
-    console.error('Error updating annotation position:', err);
   }
 }
 

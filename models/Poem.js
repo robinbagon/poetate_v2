@@ -8,7 +8,9 @@ const shareLinkSchema = new mongoose.Schema({
 
 const poemSchema = new mongoose.Schema({
   content: { type: String, required: true },
+  title: { type: String, default: '' },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   dateCreated: { type: Date, default: Date.now },
   shareLinks: [shareLinkSchema] // ✅ array of share links
 });

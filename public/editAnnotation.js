@@ -1,58 +1,38 @@
-// editAnnotation.js
-import socket from './socket.js';
+// public/editAnnotation.js
+import { annotationService } from './annotationService.js';
 
-/**
- * Makes an annotation box editable (desktop: double-click, touch: tap).
- * @param {HTMLElement} boxElement - The DOM element of the annotation box.
- * @param {string} annotationId - The custom annotation ID.
- * @param {object} annotationData - The annotation object containing _id and text.
- * @param {function} onUpdate - Callback to run after text is updated.
- */
 export function makeEditable(boxElement, annotationId, annotationData, onUpdate) {
     const enableEditing = () => {
         const originalText = annotationData.text;
-
-        // Create a textarea for editing
         const textarea = document.createElement('textarea');
         textarea.value = originalText;
         textarea.className = 'annotation-edit';
 
-        // Replace box content with textarea    
         boxElement.innerHTML = '';
         boxElement.appendChild(textarea);
         textarea.focus();
 
-        // Save on blur
         textarea.addEventListener('blur', async () => {
             const newText = textarea.value.trim();
 
             if (newText && newText !== originalText) {
-                try {
-                    const response = await fetch(`/api/annotations/${annotationData._id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: newText })
-                    });
+                // CALL THE SERVICE
+                const success = await annotationService.updateText(
+                    annotationData._id, 
+                    newText, 
+                    annotationData.annotationId, 
+                    annotationData.poemId
+                );
 
-                    if (!response.ok) throw new Error('Failed to update annotation text');
-
+                if (success) {
                     annotationData.text = newText;
                     onUpdate(newText);
-
-                    // Emit update to others via socket
-                    socket.emit('update-annotation-text', {
-                        _id: annotationData._id,
-                        annotationId: annotationData.annotationId,
-                        newText,
-                        poemId: annotationData.poemId
-                    });
-                } catch (err) {
-                    console.error(err);
-                    alert('Failed to update annotation text.');
-                    onUpdate(originalText); // revert
+                } else {
+                    alert('Failed to update.');
+                    onUpdate(originalText);
                 }
             } else {
-                onUpdate(originalText); // unchanged or empty, revert
+                onUpdate(originalText);
             }
         });
     };

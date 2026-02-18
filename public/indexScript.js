@@ -29,6 +29,15 @@ if (form) {
       const poem = await response.json();
 
       if (poem && poem._id) {
+
+      const authRes = await fetch('/api/auth/user');
+        
+        if (authRes.status === 401) {
+            // User is a guest! Save this ID in their browser memory
+            // so they can "claim" it when they log in or register.
+            localStorage.setItem('pendingPoemId', poem._id);
+            console.log('Anonymous poem detected. ID stored for later claim.');
+        }
         // Redirect to annotation page with poem ID
         window.location.href = 'annotation.html?poemId=' + poem._id;
       } else {

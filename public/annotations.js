@@ -1,19 +1,19 @@
 // annotations.js
 
-import { saveAnnotation } from './saveAnnotation.js';
-import { drawLine, redrawAllLines } from './lines.js';
+import { drawLine, resizeSvgLayer, redrawAllLines } from './lines.js';
 import { makeEditable } from './editAnnotation.js';
-import { deleteAnnotation } from './deleteAnnotation.js';
+import { annotationService } from './annotationService.js';
+import { authUI } from './authUI.js';
 import socket from './socket.js';
 
 const annotationBoxes = new Map();
 const annotationsMap = new Map();
 
 let selectedSpanIndices = [];
-let currentZIndex = 100; // start high enough to always be above page content
+let currentZIndex = 100; 
 
 let nextColorIndex = 0;
-const maxColors = 8; // matches the number of CSS highlight classes
+const maxColors = 8; 
 
 function getNextHighlightClass() {
   const highlightClass = `highlight-${nextColorIndex}`;
@@ -21,233 +21,123 @@ function getNextHighlightClass() {
   return highlightClass;
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const authStatus = document.getElementById('authStatus');
-
-  // Show placeholder while fetching
-  authStatus.textContent = 'Loading...';
-  authStatus.style.minWidth = '120px';
-  authStatus.style.minHeight = '30px';
-
-  try {
-    const response = await fetch('/api/auth/user', { credentials: 'include' });
-
-    if (response.ok) {
-      const user = await response.json();
-
-      // Populate auth bar
-      authStatus.innerHTML = `
-        <span>Welcome, ${user.email}</span>
-        <button id="dashboardBtn">Dashboard</button>
-        <button id="logoutBtn">Logout</button>
-      `;
-
-      // Attach listeners safely after DOM update
-      setTimeout(() => {
-        const logoutBtn = document.getElementById('logoutBtn');
-        const dashboardBtn = document.getElementById('dashboardBtn');
-
-        if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-          window.location.reload();
-        });
-
-        if (dashboardBtn) dashboardBtn.addEventListener('click', () => {
-          window.location.href = '/dashboard.html';
-        });
-      }, 0);
-
-    } else {
-      setupLoginRegister();
-    }
-  } catch (err) {
-    console.error('Error checking auth status:', err);
-    setupLoginRegister();
-  }
+// ✅ Correct DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    authUI.init(); 
 });
 
-function setupLoginRegister() {
-  const authStatus = document.getElementById('authStatus');
-  authStatus.innerHTML = `
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
-  `;
-
-  // Attach listeners safely after DOM update
-  setTimeout(() => {
-    const loginBtn = document.getElementById('loginBtn');
-    const registerBtn = document.getElementById('registerBtn');
-
-    if (loginBtn) loginBtn.addEventListener('click', () => window.location.href = '/login.html');
-    if (registerBtn) registerBtn.addEventListener('click', () => window.location.href = '/register.html');
-  }, 0);
-}
-
-
+// ✅ Clean initAnnotations (No stray brackets)
 export async function initAnnotations({ poemId = null, readOnly = false } = {}) {
-  const poemContent = document.getElementById('poemContent');
-  const annotationModal = document.getElementById('annotationModal');
-  const annotationText = document.getElementById('annotationText');
-  const saveAnnotationButton = document.getElementById('saveAnnotation');
-  const cancelAnnotationButton = document.getElementById('cancelAnnotation');
+    const poemContent = document.getElementById('poemContent');
+    const annotationModal = document.getElementById('annotationModal');
+    const annotationText = document.getElementById('annotationText');
+    const saveAnnotationButton = document.getElementById('saveAnnotation');
+    const cancelAnnotationButton = document.getElementById('cancelAnnotation');
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const registerBtn = document.getElementById('registerBtn');
+    if (poemId) socket.emit('join-poem-room', poemId);
 
-  if (loginBtn) loginBtn.addEventListener('click', () => window.location.href = '/login.html');
-  if (registerBtn) registerBtn.addEventListener('click', () => window.location.href = '/register.html');
-  if (logoutBtn) logoutBtn.addEventListener('click', async () => { await fetch('/api/auth/logout'); window.location.reload(); });
-  if (poemId) socket.emit('join-poem-room', poemId);
+    await loadExistingAnnotations(poemId, readOnly);
 
-  await loadExistingAnnotations(poemId, readOnly);
-
-  window.addEventListener('resize', () => {
-    for (const [annotationId, { annotation, box, targetSpan }] of annotationBoxes.entries()) {
-      if (annotation.relativePosition) {
-        const { dx, dy } = annotation.relativePosition;
-        const spanRect = targetSpan.getBoundingClientRect();
-        const baseX = spanRect.left + window.scrollX;
-        const baseY = spanRect.top + window.scrollY;
-        box.style.left = `${baseX + dx}px`;
-        box.style.top = `${baseY + dy}px`;
-      } else {
-        updateAnnotationBoxPosition(annotationId);
-      }
-    }
-    redrawAllLines(annotationBoxes);
-  });
-
-  if (!readOnly) {
-    poemContent.addEventListener('mouseup', () => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || !poemContent.contains(selection.anchorNode)) return;
-      const range = selection.getRangeAt(0);
-      const selRects = Array.from(range.getClientRects());
-
-      const selectedSpans = Array.from(poemContent.querySelectorAll('.poem-word')).filter(span => {
-        const spanRect = span.getBoundingClientRect();
-        return selRects.some(selRect => {
-          const overlapLeft = Math.max(spanRect.left, selRect.left);
-          const overlapRight = Math.min(spanRect.right, selRect.right);
-          const overlapWidth = Math.max(0, overlapRight - overlapLeft);
-          const overlapRatio = overlapWidth / spanRect.width;
-          const verticallyOverlaps = selRect.top < spanRect.bottom && selRect.bottom > spanRect.top;
-          return overlapRatio > 0.5 && verticallyOverlaps;
-        });
-      });
-
-      if (selectedSpans.length > 0) {
-        selectedSpanIndices = [...new Set(selectedSpans.map(span => span.dataset.wordIndex))];
-        const rect = range.getBoundingClientRect();
-        annotationModal.style.display = 'block';
-        annotationModal.style.position = 'absolute';
-        annotationModal.style.top = `${rect.bottom + window.scrollY}px`;
-        annotationModal.style.left = `${rect.left + window.scrollX}px`;
-      }
-    });
-  }
-
-  saveAnnotationButton.addEventListener('click', async () => {
-    if (readOnly) return;
-
-    const text = annotationText.value.trim();
-    if (text && selectedSpanIndices.length > 0) {
-        const highlightClass = getNextHighlightClass(); // pick CSS class
-        const annotationId = generateAnnotationId();
-
-        const highlight = selectedSpanIndices.map(index => {
-            const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
-            return span ? span.textContent : '';
-        }).join(' ');
-
-        const annotationData = {
-            _id: null, // will be set after saving
-            annotationId,
-            text,
-            highlight,
-            wordIndices: selectedSpanIndices,
-            colorClass: highlightClass, // store class
-            timestamp: new Date().toISOString(),
-            poemId
-        };
-
-        try {
-            const saved = await saveAnnotation(annotationData);
-            if (saved && saved._id) {
-                annotationData._id = saved._id;
+    window.addEventListener('resize', () => {
+        resizeSvgLayer(); 
+        for (const [id, data] of annotationBoxes.entries()) {
+            const { annotation, box, targetSpan } = data;
+            if (annotation.relativePosition) {
+                const { dx, dy } = annotation.relativePosition;
+                const spanRect = targetSpan.getBoundingClientRect();
+                box.style.left = `${spanRect.left + window.scrollX + dx}px`;
+                box.style.top  = `${spanRect.top + window.scrollY + dy}px`;
             } else {
-                throw new Error('No _id returned from server');
+                updateAnnotationBoxPosition(id);
             }
+        }
+        redrawAllLines(annotationBoxes);
+    });
 
-            annotationsMap.set(annotationData._id, annotationData);
-
-            // Apply CSS class to all words
-            selectedSpanIndices.forEach(index => {
-                const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
-                if (span) {
-                    span.dataset.annotationId = annotationData.annotationId;
-                    span.classList.add('highlight', highlightClass);
-                    span.dataset.annotationClass = highlightClass; // for cleanup
-                    span.title = annotationData.text;
-                }
+    if (!readOnly && poemContent) {
+        poemContent.addEventListener('mouseup', () => {
+            const selection = window.getSelection();
+            if (!selection || selection.isCollapsed || !poemContent.contains(selection.anchorNode)) return;
+            
+            const range = selection.getRangeAt(0);
+            const selRects = Array.from(range.getClientRects());
+            const selectedSpans = Array.from(poemContent.querySelectorAll('.poem-word')).filter(span => {
+                const spanRect = span.getBoundingClientRect();
+                return selRects.some(selRect => {
+                    const overlapLeft = Math.max(spanRect.left, selRect.left);
+                    const overlapRight = Math.min(spanRect.right, selRect.right);
+                    const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+                    const overlapRatio = overlapWidth / spanRect.width;
+                    return overlapRatio > 0.5 && (selRect.top < spanRect.bottom && selRect.bottom > spanRect.top);
+                });
             });
 
-            // Render annotation box with CSS class
-            renderAnnotationBox(annotationData, readOnly, highlightClass);
-
-            addHoverListenersForAnnotation(annotationData.annotationId);
-
-            // Emit new annotation
-            socket.emit('new-annotation', annotationData);
-
-            annotationText.value = '';
-            annotationModal.style.display = 'none';
-            selectedSpanIndices = [];
-
-        } catch (err) {
-            console.error('Failed to save annotation:', err);
-            alert('Failed to save annotation.');
-        }
+            if (selectedSpans.length > 0) {
+                selectedSpanIndices = [...new Set(selectedSpans.map(span => span.dataset.wordIndex))];
+                const rect = range.getBoundingClientRect();
+                annotationModal.style.display = 'block';
+                annotationModal.style.position = 'absolute';
+                annotationModal.style.top = `${rect.bottom + window.scrollY}px`;
+                annotationModal.style.left = `${rect.left + window.scrollX}px`;
+            }
+        });
     }
-});
 
+    saveAnnotationButton.addEventListener('click', async () => {
+        if (readOnly) return;
+        const text = annotationText.value.trim();
+        
+        if (text && selectedSpanIndices.length > 0) {
+            const highlightClass = getNextHighlightClass();
+            const annotationId = generateAnnotationId();
+            const highlightText = selectedSpanIndices.map(index => {
+                const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
+                return span ? span.textContent : '';
+            }).join(' ');
 
-  cancelAnnotationButton.addEventListener('click', () => {
-    annotationText.value = '';
-    annotationModal.style.display = 'none';
-    selectedSpanIndices = [];
-  });
+            const annotationData = {
+                annotationId,
+                text,
+                highlight: highlightText,
+                wordIndices: selectedSpanIndices,
+                colorClass: highlightClass,
+                poemId
+            };
 
-  // Socket events
-  socket.on('new-annotation', data => {
-    if (!annotationsMap.has(data._id)) {
-      annotationsMap.set(data._id, data);
-      renderAnnotationBox(data, false, data.colorClass);
+            try {
+                const saved = await annotationService.save(annotationData);
+                annotationData._id = saved._id;
+                annotationsMap.set(annotationData._id, annotationData);
 
-      data.wordIndices.forEach(index => {
-      const span = document.querySelector(`.poem-word[data-word-index="${index}"]`);
-      if (span) {
-        span.dataset.annotationId = data.annotationId;
-        span.dataset.highlightCount = parseInt(span.dataset.highlightCount || '0', 10) + 1;
-        span.classList.add('highlight', data.colorClass); // ✅ use same logic
-        span.dataset.annotationClass = data.colorClass;
-        span.title = `Highlighted ${span.dataset.highlightCount} time${span.dataset.highlightCount > 1 ? 's' : ''}`;
-      }
+                selectedSpanIndices.forEach(index => {
+                    const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
+                    if (span) {
+                        span.dataset.annotationId = annotationId;
+                        span.classList.add('highlight', highlightClass);
+                        span.title = text;
+                    }
+                });
+
+                renderAnnotationBox(annotationData, readOnly, highlightClass);
+                addHoverListenersForAnnotation(annotationId);
+
+                annotationText.value = '';
+                annotationModal.style.display = 'none';
+                selectedSpanIndices = [];
+            } catch (err) {
+                console.error('Failed to save:', err);
+                alert('Could not save annotation.');
+            }
+        }
     });
 
-    addHoverListenersForAnnotation(data.annotationId);
-  }
-});
+    cancelAnnotationButton.addEventListener('click', () => {
+        annotationModal.style.display = 'none';
+        selectedSpanIndices = [];
+    });
+} // <--- initAnnotations ends here cleanly
 
-  // -------------------- HELPER: resize SVG layer --------------------
-function resizeSvgLayer() {
-  const svg = document.getElementById('annotation-lines');
-  if (svg) {
-    svg.setAttribute('width', document.documentElement.scrollWidth);
-    svg.setAttribute('height', document.documentElement.scrollHeight);
-  }
-}
+
 
 // Run once at start
 document.addEventListener('DOMContentLoaded', resizeSvgLayer);
@@ -296,6 +186,41 @@ socket.on('delete-annotation', ({ _id }) => {
     annotationsMap.delete(_id);
 });
 
+// annotations.js (Updated Socket Listener)
+socket.on('new-annotation', data => {
+    // 🛡️ DOUBLE-CHECK: If we already have this annotationId, STOP.
+    // This prevents the "echo" from the server creating a second box.
+    if (annotationsMap.has(data.annotationId)) {
+        console.log("Annotation already exists locally. Skipping socket render.");
+        return; 
+    }
+
+    // 1. Register the new annotation in the map
+    annotationsMap.set(data.annotationId, data);
+
+    // 2. Determine Read-Only state
+    // We check if the global 'isReadOnly' variable (set during initAnnotations) is true.
+    const readOnlyMode = typeof isReadOnly !== 'undefined' ? isReadOnly : false;
+    
+    // Render the box - pass the correct readOnly state
+    renderAnnotationBox(data, readOnlyMode, data.colorClass);
+
+    // 3. Highlight the words in the poem
+    data.wordIndices.forEach(index => {
+        const span = document.querySelector(`.poem-word[data-word-index="${index}"]`);
+        if (span) {
+            span.dataset.annotationId = data.annotationId;
+            span.classList.add('highlight', data.colorClass);
+            span.title = data.text;
+        }
+    });
+
+    // 4. Ensure hover listeners are attached so the connecting lines appear
+    if (typeof addHoverListenersForAnnotation === 'function') {
+        addHoverListenersForAnnotation(data.annotationId);
+    }
+});
+
 
 
   socket.on('update-annotation-position', data => {
@@ -324,7 +249,7 @@ socket.on('delete-annotation', ({ _id }) => {
       annotation.text = newText;
     }
   });
-}
+
 
 function generateAnnotationId() {
   return 'ann-' + Math.random().toString(36).substr(2, 9);
@@ -366,7 +291,6 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
 
         box.style.left = `${baseX + dx}px`;
         box.style.top = `${baseY + dy}px`;
-        box.style.position = 'absolute';
     } else {
         updateAnnotationBoxPosition(annotationData._id);
     }
@@ -412,7 +336,11 @@ box.addEventListener('contextmenu', async (e) => {
         if (!confirm('Delete this annotation?')) return;
 
         const annotationId = annotationData._id;
-        const success = await deleteAnnotation(annotationId);
+        const success = await annotationService.delete(
+        annotationId, 
+        annotationData.annotationId, 
+        annotationData.poemId
+);
         if (!success) return;
 
         const { box, line, annotation } = annotationBoxes.get(annotationId);
@@ -483,11 +411,6 @@ function updateAnnotationBoxPosition(annotationId) {
     const spanRect = targetSpan.getBoundingClientRect();
     const sidePadding = 20;
     const verticalSpacing = 10;
-
-    // Let the browser compute the real width based on content
-    box.style.width = 'auto';
-    box.style.maxWidth = '300px';
-    box.style.position = 'absolute';
 
     const boxWidth = box.offsetWidth;
 
@@ -608,7 +531,7 @@ function makeDraggable(el, annotationId) {
                 dy: boxY - spanY
             };
 
-            updateAnnotationPosition(annotation);
+            annotationService.updatePosition(annotation);
         }
 
         document.addEventListener('mousemove', onMouseMove);
