@@ -23,6 +23,8 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err.message));
 
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -32,8 +34,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  proxy: true, // This tells the session to trust the Render proxy
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    // When live, these settings are required for modern browsers to accept the cookie
+    secure: true, 
+    sameSite: 'none', 
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 // 24 hours
   }
