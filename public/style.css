@@ -14,23 +14,41 @@ h1, h2, p {
     font-family: 'IBM Plex Mono', monospace;
 }
 
+h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #000;
+    margin-bottom: 1.5rem;
+}
+
 /* Poem container */
 .poem-container {
     display: inline-block;
-    max-width: 700px;
-    padding: 20px;
+    max-width: 800px;
+    padding: 60px; /* More white space around the poem */
     background-color: white;
-    border: 1px solid #ddd;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #000; /* Sharp black border */
+    box-shadow: 12px 12px 0px #f0f0f0; /* Large, flat, architectural shadow */
     text-align: left;
-    
+    margin-top: 120px;
+    margin-bottom: 120px;
+    line-height: 1.7; /* Crucial for poetry readability */
 }
+
 
 /* Poem content */
 .poem-content {
-    font-size: 1.2em;
+    font-size: 1.1em;
     line-height: 1.8;
+    color: #222;
     white-space: pre-wrap; /* Preserve line breaks and spacing */
+    font-family: 'EB Garamond', serif;
+    font-size: 1.35rem;
+    color: #1a1a1a;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased; /* Makes serif fonts crisper on Mac */
+    font-variant-numeric: oldstyle-nums; /* Makes numbers look "classic" */
 }
 
 /* Poem words */
@@ -74,76 +92,179 @@ h1, h2, p {
 }
 
 .modal-content {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    width: 300px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    position: relative;
-    border: 1px solid #ddd;
-    z-index: 1500;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 1rem;
+  border-radius: 0; /* Sharp corners to match the theme */
+  border: 2px solid #000;
+  width: 95%;
+  Width: 300px;
 }
 
 .modal-content textarea {
-    height: 100px;
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: none;
-    font-family: 'Space Mono', monospace;
+  font-family: 'Space Mono', monospace;
+  border: 1px solid #bbb;
+  padding: 10px;
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 100px;
 }
 
+.modal-content textarea:focus {
+    border-color: #000;
+}
+
+/* Base button style for the Modal */
 .modal-content button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
+    padding: 12px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
+    border-radius: 0; /* Brutalist sharp corners */
 }
 
-.modal-content button:hover {
-    background-color: #0056b3;
+/* Primary Action: Save */
+#saveAnnotation {
+    background-color: #000;
+    color: #fff;
+    border: 1px solid #000;
 }
 
-/* Annotation box */
+#saveAnnotation:hover {
+    background-color: #333;
+    transform: translateY(-1px);
+}
+
+/* Secondary Action: Cancel */
+#cancelAnnotation {
+    background-color: transparent;
+    color: #999;
+    border: 1px solid #bbb;
+    margin-top: -5px; /* Pull it closer to the save button */
+}
+
+#cancelAnnotation:hover {
+    color: #ff4444;
+    border-color: #ff4444;
+}
+
 .annotation-box {
     position: absolute;
-    background: #f0f0f0;
-    border: 1px solid #ccc;
-    padding: 6px 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    max-width: 300px;   
+    padding: 8px 12px;
+    border-radius: 0; /* Sharp corners */
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1); /* Industrial "block" shadow */
+    max-width: 280px;
+    border: 1px solid #888; /* Darker border as requested */
+    touch-action: none;
+    will-change: left, top;
+    user-select: none;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    animation: boxAppear 0.3s ease-out;
 }
 
-/* Annotation box glow on hover */
+@keyframes boxAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Hover state: Lift the card slightly */
 .annotation-box.hovered {
-   border: 2px solid orange;
-    /*background: #fffbe6;*/
-   background: #ffffff;
+    border: 1px solid #000;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+    z-index: 4000; /* Bring to front on hover */
+}
+
+/* Poem Highlights (The text markers) */
+.poem-word.highlight-0 { background-color: #ffd8b8; } 
+.poem-word.highlight-1 { background-color: #c0f0ff; } 
+.poem-word.highlight-2 { background-color: #fffeb3; } 
+.poem-word.highlight-3 { background-color: #f7d9f2; } 
+.poem-word.highlight-4 { background-color: #e9ecef; } 
+.poem-word.highlight-5 { background-color: #d6fffb; } 
+.poem-word.highlight-6 { background-color: #ffecce; } 
+.poem-word.highlight-7 { background-color: #f0f5d8; }
+
+/* The Boxes (Slightly lighter than the highlights) */
+.annotation-box.highlight-0 { border-left: 5px solid #ff9f5d; background-color: #fff5ed; }
+.annotation-box.highlight-1 { border-left: 5px solid #81e2ff; background-color: #f0fbff; }
+.annotation-box.highlight-2 { border-left: 5px solid #f5f750; background-color: #fffef2; }
+.annotation-box.highlight-3 { border-left: 5px solid #efa7e3; background-color: #fdf5fc; }
+.annotation-box.highlight-4 { border-left: 5px solid #888888; background-color: #f8f9fa; }
+.annotation-box.highlight-5 { border-left: 5px solid #20c997; background-color: #f0fffb; }
+.annotation-box.highlight-6 { border-left: 5px solid #ffb347; background-color: #fff9f0; }
+.annotation-box.highlight-7 { border-left: 5px solid #94d82d; background-color: #f9fbf2; }
+
+.annotation-box-glow {
+    transition: all 0.2s ease;
+    transform: translate(-4px, -4px);
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.15);
+    border-color: #000;
 }
 
 #annotation-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-    height: auto%;
-    min-height: 100%; 
-  pointer-events: none;
-  z-index: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* Fixed typo: using height 100% to cover the whole scrollable area */
+    height: 100%; 
+    pointer-events: none;
+    z-index: 1; /* Sit just above the poem text but below the boxes */
 }
 
+.annotation-line {
+    fill: none;
+    stroke: #bbb; /* Default neutral gray */
+    stroke-width: 1.2;
+    stroke-dasharray: 3 4; /* Slightly tighter dots for a technical look */
+    transition: all 0.2s ease;
+    animation: lineFadeIn 0.4s ease-out forwards;
+}
+
+.annotation-line.line-new {
+    animation: lineFadeIn 0.5s ease-out forwards;
+}
+
+/* Hover State: Solid and bold */
 .annotation-line.hovered {
-    stroke: orange;
-    stroke-width: 2.5;
+    stroke-width: 2;
+    stroke-dasharray: none; /* Becomes solid when focused */
+}
+
+/* Dynamic color overrides for the 8 highlight categories */
+.annotation-line.highlight-0 { stroke: #ff9f5d; }
+.annotation-line.highlight-1 { stroke: #81e2ff; }
+.annotation-line.highlight-2 { stroke: #f5f750; }
+.annotation-line.highlight-3 { stroke: #efa7e3; }
+.annotation-line.highlight-4 { stroke: #888888; }
+.annotation-line.highlight-5 { stroke: #20c997; }
+.annotation-line.highlight-6 { stroke: #ffb347; }
+.annotation-line.highlight-7 { stroke: #94d82d; }
+
+@keyframes lineFadeIn {
+    from {
+        opacity: 0;
+        stroke-dashoffset: 10; /* Adds a slight movement during fade */
+    }
+    to {
+        opacity: 1;
+        stroke-dashoffset: 0;
+    }
 }
 
 .annotation-edit {
@@ -156,33 +277,6 @@ h1, h2, p {
 
 .poem-stanza {
     margin-bottom: 1.5em;
-}
-
-.poem-line {
-/*    text-indent: 2em; /* Optional */
-}
-
-.dashboard-container {
-  max-width: 800px;
-  margin: 50px auto;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.dashboard-container h1, h2 {
-  margin-bottom: 10px;
-}
-
-.dashboard-container ul {
-  list-style: none;
-  padding: 0;
-}
-
-.dashboard-container li {
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
 }
 
 .auth-controls {
@@ -204,67 +298,47 @@ h1, h2, p {
   background-color: #b02a37;
 }
 
-
 /* Top-right auth bar */
 .auth-bar {
-    position: absolute;
-    top: 10px;
-    right: 10px;
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    font-family: 'Inter', sans-serif;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 5px 15px;
-    border-radius: 20px;
-    z-index: 1000; /* Ensure it stays above the SVG lines */
+    font-size: 0.8rem;
+    /* We removed the Inter font, the white bubble background, and the 20px radius */
 }
 
 .auth-bar span {
-  color: #333;
-  font-weight: 500;
+    color: #666; /* Subtle grey for the email */
+    font-family: 'Space Mono', monospace;
 }
 
-.auth-bar button {
-  background: none;
-  border: none;
-  color: #007bff;
-  font-size: 0.95em;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+/* Hide the email address only on the Annotate page */
+.auth-bar span {
+    display: none !important;
 }
 
-.auth-bar button:hover {
-  background-color: rgba(0, 123, 255, 0.1);
+.auth-bar button:hover, 
+.nav-btn:hover, 
+.header-buttons button:hover {
+    background: #000;
+    color: #fff;
+    border-color: #000;
 }
 
-/* Dashboard action buttons */
-.dashboard-container button {
-  padding: 6px 12px;
-  margin-left: 6px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  /*background-color: #f5f5f5;*/
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-/*.dashboard-container button:hover {
-  background-color: green;
-  border-color: #999;*/
-}
-
-/* Optional: better spacing between list items */
-.dashboard-container ul {
-  list-style-type: none;
-  padding-left: 0;
-}
-
-.dashboard-container li {
-  margin-bottom: 10px;
+.auth-bar button, 
+.nav-btn, 
+.header-buttons button {
+    background: transparent;
+    border: 1px solid #000; /* Back to our clean black border */
+    color: #000;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 2px;
 }
 
 .share-btn {
@@ -288,38 +362,152 @@ h1, h2, p {
   border-color: #007bff;
 }
 
-#dashboardContainer {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: sans-serif;
+/* Dashboard action buttons */
+/* 1. Main Container */
+.dashboard-container {
+    min-width: 600px;
+    max-width: 700px;
+    width: 90%;
+    margin: 50px auto;
+    padding: 2.5rem;
+    background: white;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    /* Your preferred box shadow */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
 }
 
+/* 2. Header & Layout */
 #dashboardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 1.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.user-profile {
+    align-self: flex-end; /* Keeps username on the right */
 }
 
 .header-buttons {
-  display: flex;
-  gap: 0.5rem;
+    display: flex;
+    justify-content: center; /* Keeps buttons centered */
+    gap: 12px;
+}
+
+/* 3. Global Dashboard Typography */
+.dashboard-container h1, 
+.dashboard-container h2 {
+    margin-bottom: 1rem;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* 4. Poem Lists */
+.dashboard-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dashboard-container li {
+    padding: 12px 0;
+    margin-bottom: 0; /* Resetting previous margin */
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-container li:last-child {
+    border-bottom: none;
+}
+
+/* 5. Buttons (General dashboard buttons) */
+.dashboard-container button {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: transparent;
+}
+
+.dashboard-container button:hover {
+    background-color: #f9f9f9;
+    border-color: #888;
+}
+
+/* 6. Mobile Responsiveness */
+@media (max-width: 650px) {
+    .dashboard-container {
+        min-width: 95%;
+        padding: 1.5rem;
+        margin: 20px auto;
+    }
+}
+
+.user-profile {
+  align-self: flex-end;
+}
+
+#userEmail {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: #888;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
 }
 
 .header-buttons button {
-  background: none;
-  border: 1px solid #ccc;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.2s, border-color 0.2s;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.75rem;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 2px;
 }
 
-.header-buttons button:hover {
-  background: #f4f4f4;
-  border-color: #888;
+.header-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* Primary Action: Add Poem */
+#addPoemButton {
+    background: #000;
+    color: #fff;
+    border: 1px solid #000;
+}
+
+#addPoemButton:hover {
+    background: #333;
+    border-color: #333;
+    transform: translateY(-1px);
+}
+
+/* Secondary Action: Logout */
+#logoutButton {
+    background: transparent;
+    color: #888;
+    border: 1px solid #eee;
+}
+
+#logoutButton:hover {
+    color: #000;
+    border-color: #000;
+    background: #fcfcfc;
 }
 
 
@@ -334,19 +522,26 @@ h1, h2, p {
 .poem-title {
   flex: 1;
   text-decoration: none;
-  color: #1a73e8; /* soft link blue */
+  color: #1a73e8;
   font-family: 'IBM Plex Mono', monospace;
   cursor: pointer;
-  transition: color 0.2s ease;
   padding: 4px 6px;
+  border-radius: 4px; /* Move this here so it's ready for the background */
+  transition: all 0.2s ease;
 }
 
 .poem-title:hover {
-  color: #0c47b7; /* slightly darker on hover */
-  background-color: rgba(0, 123, 255, 0.1);
-  border-radius: 4px;
-  padding: 4px 6px;
-  transition: background-color 0.2s ease;
+  color: #0c47b7;
+  background-color: rgba(26, 115, 232, 0.1); /* Match your link blue */
+}
+
+/* Ensure the shared list looks the same as the main list */
+#sharedPoemList li.poem-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
 }
 
 .poem-buttons {
@@ -406,9 +601,13 @@ h1, h2, p {
 }
 
 .tier-info {
-  margin-bottom: 1em;
-  font-size: 0.8em;
-  color: lightgrey;
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f0f0f0;
+  font-size: 0.75rem;
+  color: #aaa;
+  display: flex;
+  justify-content: space-between;
 }
 
 .highlight-glow {
@@ -421,31 +620,20 @@ h1, h2, p {
   border-top-width: 2px;
 }
 
-.annotation-box-glow {
-    transition: all 0.2s ease;
-  transform: translateY(-3px); /* slight lift */
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); /* bigger, soft shadow */
-  border-color: yellow;
-  background-color: yellow;
-}
 
-.annotation-line-glow {
-  stroke: #ffcc00; /* change line color or add glow effect */
-  stroke-width: 3;
-}
-
-.site-logo {
-  max-height: 100px;
-  margin: 20px;
-}
 
 .site-header {
-  display: flex;
-  justify-content: center;
+    padding: 2rem 0 1rem 0;
+    text-align: center;
+}
+
+.site-header .logo {
+    max-height: 150px;
+    height: auto;
 }
 
 .logo {
-  height: 100px;
+  height: 150px;
   width: auto;
 }
 
@@ -455,121 +643,71 @@ h1, h2, p {
   padding: 0 0px;
 }
 
-/* Specific highlight colors */
-.poem-word.highlight-0 { background-color: #ff9f5d; }  /* orange */
-.poem-word.highlight-1 { background-color: #81e2ff; }  /* blue */
-.poem-word.highlight-2 { background-color: #f5f750; }  /* yellow */
-.poem-word.highlight-3 { background-color: #efa7e3; }  /* purple */
-.poem-word.highlight-4 { background-color: #dde1e6; }  /* grey */
-.poem-word.highlight-5 { background-color: #b8fff6; }  /* galazio */
-.poem-word.highlight-6 { background-color: #ffd68d; }  /* light orange */
-.poem-word.highlight-7 { background-color: #e6efad; }  /* green */
-
-
-
-/* Annotation boxes */
-.annotation-box.highlight-0 { border: 2px solid #ff9f5d; background-color: #ffe1cc; }
-.annotation-box.highlight-1 { border: 2px solid #81e2ff; background-color: #d9f7ff; }
-.annotation-box.highlight-2 { border: 2px solid #f5f750; background-color: #fcfccf; }
-.annotation-box.highlight-3 { border: 2px solid #efa7e3; background-color: #f9dcf5; }
-.annotation-box.highlight-4 { border: 2px solid #dde1e6; background-color: #f5f6f8; }
-.annotation-box.highlight-5 { border: 2px solid #b8fff6; background-color: #e6fffb; }
-.annotation-box.highlight-6 { border: 2px solid #ffd68d; background-color: #ffefd2; }
-.annotation-box.highlight-7 { border: 2px solid #e6efad; background-color: #f4f7e0; }
-
-/* Hover effects (existing glow) */
-
-
-
-
-.annotation-line-glow {
-  stroke-width: 3;
-  stroke-opacity: 0.8;
-}
 
 .poem-word.temp-highlight {
     background-color: rgba(255, 165, 0, 0.4); /* or any light version of your highlight color */
 }
 
 .site-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  font-size: 0.8em;
-  color: #999;
-  background: rgba(255, 255, 255, 0.7); /* translucent, unobtrusive */
-  backdrop-filter: blur(4px); /* subtle blur if supported */
-  padding: 6px 0;
-  border-top: 1px solid #eee;
-  z-index: 10;
-  pointer-events: none; /* prevents footer from interfering with clicks */
+  margin-top: auto; /* Pushes footer to bottom */
+  padding: 2rem 0;
+  color: #bbb;
 }
 
 #modeSwitchContainer {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 3000;
+    position: absolute;
+    top: 15px; /* Aligned with your new auth bar height */
+    left: 20px;
+    z-index: 3000;
 }
 
 #modeSwitch {
-  position: relative;
-  display: flex;
-  background: #e5e5e5;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid #ccc;
-  width: 240px;
-  height: 36px;
-  font-family: Inter, sans-serif;
+    position: relative;
+    display: flex;
+    background: #fff; /* Solid white background */
+    border: 1px solid #000; /* Sharp black border */
+    width: 260px; /* Slightly wider for better spacing */
+    height: 32px;
+    font-family: 'Space Mono', monospace;
+    border-radius: 0; /* Sharp corners */
 }
 
-/* Updated class name to match your main.js code */
 #modeSwitch .mode-option {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 13px;
-  color: #555;
-  user-select: none;
-  position: relative;
-  z-index: 2;
-  /* Reset button styles if you use button tags */
-  border: none;
-  background: transparent;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #000;
+    user-select: none;
+    position: relative;
+    z-index: 2;
+    border: none;
+    background: transparent;
+    transition: color 0.2s ease;
+}
+
+/* Change text color to white when the black selector slides under it */
+#modeSwitch .mode-option.active {
+    color: #fff;
 }
 
 #switchSelector {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: calc(100% / 3); /* Use percentage for cleaner calc */
-  height: 100%;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
-  transition: left 0.25s ease;
-  z-index: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% / 3);
+    height: 100%;
+    background: #000; /* Solid black selector */
+    border-radius: 0; /* Sharp corners */
+    transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
 }
 
-.annotation-line {
-    fill: none;
-    stroke: grey;
-    stroke-width: 1.5;
-    stroke-dasharray: 2 6;
-    transition: stroke 0.3s ease, stroke-width 0.3s ease;
-    pointer-events: none; /* Prevents the line from blocking clicks/drags */
-}
 
-.annotation-line.hovered {
-    stroke: orange;
-    stroke-width: 2.5;
-    stroke-dasharray: none; /* Makes the line solid on hover */
-}
 
 /* Floating Annotate Button */
 .annotate-floating-btn {
@@ -606,12 +744,6 @@ h1, h2, p {
     transform: scale(0.98);
 }
 
-.annotation-box {
-  /* ... your existing styles ... */
-  touch-action: none;       /* Stops browser-level scrolling when touching the box */
-  will-change: left, top;   /* Optimizes performance for moving elements */
-  user-select: none;        /* Prevents accidental text selection while dragging */
-}
 
 .custom-rename-btn {
   background: url('/images/rename.svg') no-repeat center;
@@ -626,14 +758,15 @@ h1, h2, p {
   opacity: 1;
 }
 
-/* Password Reset Page Styles */
+/* Password Reset & Auth Page Styles */
 .auth-page-body {
-    background-color: #f9f9f9;
+    background-color: #ffffff; /* Clean white background */
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
+    font-family: 'Space Mono', monospace;
 }
 
 .reset-container {
@@ -641,55 +774,121 @@ h1, h2, p {
     width: 90%;
     padding: 40px;
     background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 2px solid #000; /* Sharp black border instead of soft shadow */
+    border-radius: 0;        /* Removed rounding */
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1); /* "Brutalist" block shadow */
     text-align: center;
 }
 
 .reset-container h1 {
-    font-family: 'Georgia', serif;
-    font-size: 2rem;
-    margin-bottom: 10px;
+    font-family: 'Space Mono', monospace; /* Match the dashboard */
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
 }
 
 .reset-form {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-top: 25px;
+    gap: 20px;
+    margin-top: 10px;
 }
 
 .reset-form input {
     padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 1rem;
+    border: 1px solid #888; /* Darker border as we discussed */
+    border-radius: 0;        /* Sharp corners */
+    font-size: 0.9rem;
+    font-family: 'Space Mono', monospace;
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
 }
 
 .reset-form input:focus {
     border-color: #000;
+    background-color: #fcfcfc;
 }
 
 .reset-button {
-    padding: 12px;
+    padding: 14px;
     background: #000;
     color: #fff;
-    border: none;
-    border-radius: 6px;
+    border: 1px solid #000;
+    border-radius: 0;        /* Sharp corners */
     cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: background 0.3s;
+    font-size: 0.8rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 400;        /* Monospace looks better at normal weight */
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: all 0.2s;
 }
 
 .reset-button:hover {
     background: #333;
+    transform: translateY(-2px); /* Slight lift on hover */
+    box-shadow: 0 4px 0 #000;
+}
+
+/* Link styling (e.g., "Back to Login") */
+.reset-container a {
+    display: inline-block;
+    margin-top: 20px;
+    color: #666;
+    font-size: 0.75rem;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.reset-container a:hover {
+    color: #000;
+    text-decoration: underline;
 }
 
 #message {
     margin-top: 15px;
     font-size: 0.9rem;
     min-height: 1.2em; /* Prevents layout jump when message appears */
+}
+.empty-list-message {
+    color: #888;
+    font-style: italic;
+    padding: 20px 0;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.top-nav-actions {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 1000;
+}
+
+/* A slightly distinct style for the 'Add New' button so it's not confused with auth links */
+.nav-btn-alt {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s;
+}
+
+.nav-btn-alt:hover {
+    background: #333;
+}
+
+/* Ensure authStatus doesn't have its own absolute positioning that breaks the flexbox */
+.auth-bar {
+    
 }

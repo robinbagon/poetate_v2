@@ -36,9 +36,8 @@ app.use(session({
   saveUninitialized: false,
   proxy: true, // This tells the session to trust the Render proxy
   cookie: {
-    // When live, these settings are required for modern browsers to accept the cookie
-    secure: true, 
-    sameSite: 'none', 
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', 
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 // 24 hours
   }

@@ -41,6 +41,16 @@ function renderPoemList(list, elementId, isOwner) {
   if (!container) return;
   container.innerHTML = ''; // Clear existing content
 
+  if (!list || list.length === 0) {
+    const emptyMsg = document.createElement('p');
+    emptyMsg.className = 'empty-list-message';
+    emptyMsg.textContent = isOwner 
+      ? 'Your poems will appear here.' 
+      : 'Shared poems will appear here.';
+    container.appendChild(emptyMsg);
+    return; // 
+  }
+
   list.forEach(poem => {
     const li = document.createElement('li');
     li.className = 'poem-item';

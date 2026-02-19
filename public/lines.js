@@ -17,12 +17,8 @@ export function resizeSvgLayer() {
  */
 export function drawLine(startElem, endElem, annotationId) {
     const svg = document.getElementById('annotation-lines');
-    if (!svg) {
-        console.error('SVG container for lines not found.');
-        return;
-    }
+    if (!svg) return;
 
-    // Compute coordinates relative to page
     const startRect = startElem.getBoundingClientRect();
     const endRect = endElem.getBoundingClientRect();
 
@@ -33,13 +29,11 @@ export function drawLine(startElem, endElem, annotationId) {
 
     const curveAmount = 50;
     const midX = (startX + endX) / 2;
-
-    const d = `M ${startX},${startY}
-               C ${startX + curveAmount},${startY}
-                 ${midX - curveAmount},${endY}
+    const d = `M ${startX},${startY} 
+               C ${startX + curveAmount},${startY} 
+                 ${midX - curveAmount},${endY} 
                  ${endX},${endY}`;
 
-    // Prefer explicit param, then dataset on endElem
     annotationId = annotationId || endElem.dataset.annotationId || endElem.getAttribute('data-annotation-id');
 
     if (!annotationId) {
@@ -47,18 +41,32 @@ export function drawLine(startElem, endElem, annotationId) {
         endElem.dataset.annotationId = annotationId;
     }
 
-    // Try to find an existing path for this annotationId
     let path = svg.querySelector(`.annotation-line[data-annotation-id="${annotationId}"]`);
 
-    if (path) {
-        path.setAttribute('d', d);
-    } else {
+    if (!path) {
         path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', d);
         path.setAttribute('data-annotation-id', annotationId);
         path.classList.add('annotation-line');
-        // NOTE: Stroke and Dash styles moved to style.css
+        path.classList.add('line-new');
         svg.appendChild(path);
+        } else {
+        // Remove the entry animation class if it's just a redraw/move
+        path.classList.remove('line-new');
+    }
+
+    path.setAttribute('d', d);
+
+    /** * NEW: Sync Color Class
+     * Look for 'highlight-X' on the startElem (the poem word) 
+     * and apply it to the line.
+     */
+    const colorClass = Array.from(startElem.classList).find(cls => cls.startsWith('highlight-'));
+    if (colorClass) {
+        // Remove any old highlight classes and add the current one
+        path.classList.forEach(cls => {
+            if (cls.startsWith('highlight-')) path.classList.remove(cls);
+        });
+        path.classList.add(colorClass);
     }
 
     return path;

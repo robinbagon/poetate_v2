@@ -57,33 +57,57 @@ async function loadPoemAndRender() {
 // Execute logic
 loadPoemAndRender();
 
+document.getElementById('addNewPoemHeader')?.addEventListener('click', () => {
+    window.location.href = '/index.html';
+});
+
 // ============================================
 // UI Switch Logic (Kept outside for DOM access)
 // ============================================
 document.addEventListener("DOMContentLoaded", () => {
     const switchSelector = document.getElementById("switchSelector");
-    const options = document.querySelectorAll(".mode-option"); // Using class for safety
+    const options = document.querySelectorAll(".mode-option");
 
     if (!switchSelector || !options.length) return;
 
     const setSwitchPosition = () => {
-        const forced = localStorage.getItem("forceMode");
-        let index = 0; // Auto
-        if (forced === "desktop") index = 1;
-        if (forced === "touch") index = 2;
+        const forced = localStorage.getItem("forceMode") || "auto";
+        let index = 0;
+
+        // Sync visual position and the 'active' class for text color
+        options.forEach((opt, i) => {
+            if (opt.dataset.mode === forced) {
+                index = i;
+                opt.classList.add("active");
+            } else {
+                opt.classList.remove("active");
+            }
+        });
+
         switchSelector.style.left = `calc((100% / 3) * ${index})`;
     };
 
     options.forEach(option => {
         option.addEventListener("click", () => {
             const mode = option.dataset.mode;
-            if (mode === "auto") localStorage.removeItem("forceMode");
-            else localStorage.setItem("forceMode", mode);
+            
+            // Highlight instantly for better perceived performance
+            options.forEach(opt => opt.classList.remove("active"));
+            option.classList.add("active");
+
+            if (mode === "auto") {
+                localStorage.removeItem("forceMode");
+            } else {
+                localStorage.setItem("forceMode", mode);
+            }
             
             setSwitchPosition();
-            setTimeout(() => location.reload(), 150);
+            
+            // Short delay so the user sees the slider move before the reload
+            setTimeout(() => location.reload(), 200);
         });
     });
 
+    // Run on initial load
     setSwitchPosition();
 });

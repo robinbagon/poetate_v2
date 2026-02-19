@@ -34,7 +34,7 @@ export const authUI = {
 
     renderLoggedIn(container, user) {
         container.innerHTML = `
-            <span>Logged in as: <strong>${user.email}</strong></span>
+            <span>${user.email}</span>
             <button class="nav-btn" onclick="window.location.href='/dashboard.html'">Dashboard</button>
             <button id="logoutAction" class="nav-btn">Logout</button>
         `;
