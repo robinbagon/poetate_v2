@@ -37,26 +37,45 @@ router.post('/login', async (req, res) => {
 router.post('/register', async (req, res) => {
     const { email, password, pendingPoemId } = req.body;
     try {
+        // 1. Create the user in your database
         const passwordHash = await bcrypt.hash(password, 10);
         const user = new User({ email, passwordHash });
         await user.save();
 
+        // 2. Handle Resend logic in a single background block
+        // We do this in a separate try/catch so a failed email doesn't break the whole registration
         try {
+            // Send the Template Email
             await resend.emails.send({
                 from: 'Poetate <info@poetate.org>',
                 to: email,
                 subject: 'Welcome to Poetate!',
-                html: `<h2>Welcome to Poetate!</h2><p>Your account has been created successfully.</p>`
+                templateId: 'welcome-email', // Ensure this is the "Name" or "ID" from Resend
+                data: {
+                    email: email, 
+                },
             });
-        } catch (mailError) {
-            console.error('Email failed to send:', mailError);
+
+            // Add to Audience List
+            await resend.contacts.create({
+                email: email,
+                unsubscribed: false,
+                audienceId: 'your-audience-id-from-resend', 
+            });
+
+        } catch (resendError) {
+            // Log the error but don't stop the user from logging in
+            console.error('Resend service error:', resendError);
         }
 
+        // 3. Set session and handle pending poems
         req.session.userId = user._id;
         if (pendingPoemId) {
             await Poem.findOneAndUpdate({ _id: pendingPoemId, userId: null }, { userId: user._id });
         }
+        
         res.status(201).json({ message: 'Registration successful' });
+
     } catch (err) {
         console.error('Registration error:', err);
         res.status(500).json({ message: 'Registration failed' });
@@ -68,6 +87,7 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
         const user = await User.findOne({ email });
+        // Standard security practice: don't reveal if user exists
         if (!user) return res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
 
         const token = crypto.randomBytes(20).toString('hex');
@@ -76,14 +96,21 @@ router.post('/forgot-password', async (req, res) => {
         await user.save();
 
         const resetUrl = `https://poetate.org/reset-password/${token}`;
+
+        // Call Resend using the Template
         await resend.emails.send({
             from: 'Poetate <info@poetate.org>',
             to: user.email,
             subject: 'Poetate Password Reset',
-            html: `<p>Click below to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`
+            templateId: 'password-reset', // Must match name in Resend Dashboard
+            data: {
+                resetUrl: resetUrl // Maps to {{resetUrl}} in the HTML
+            }
         });
+
         res.status(200).json({ message: 'Reset email sent' });
     } catch (err) {
+        console.error('Forgot password error:', err);
         res.status(500).json({ message: 'Error sending reset email' });
     }
 });

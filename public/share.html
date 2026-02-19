@@ -9,11 +9,14 @@
     <script src="/socket.io/socket.io.js"></script>
      <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=Space+Mono&display=swap" rel="stylesheet">
   </head>
   <body>
 
-      <div id="sharingBanner" class="banner"></div>
-     <div id="authStatus" class="auth-bar"></div>
+      <nav class="system-header">
+        <div id="sharingBanner" class="status-zone"></div>
+        <div id="authStatus" class="auth-zone"></div>
+      </nav>
 
     <svg id="annotation-lines"></svg>
 
@@ -28,6 +31,10 @@
         <button id="cancelAnnotation">Cancel</button>
       </div>
     </div>
+
+    <div id="dashboard-toast">
+    Poem saved to your <a href="/dashboard" class="toast-link">Dashboard</a>
+  </div>
 
     <script type="module" src="share.js"></script>
     

@@ -892,3 +892,129 @@ h2 {
 .auth-bar {
     
 }
+
+/* The Main Header */
+.system-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    /* Layout */
+    box-sizing: border-box;
+    padding: 20px 24px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #eeeeee;
+    
+    /* Typography */
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    
+    /* Non-fixed positioning: This allows it to scroll away */
+    position: relative; 
+    margin-bottom: 40px; 
+}
+
+/* Status Zone (Left) */
+.status-zone {
+    color: #888;
+}
+
+/* Auth Zone (Right) */
+/* Make the links look like the buttons */
+.auth-link {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid #000;
+    color: #000;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 2px;
+    text-decoration: none; /* Removes the underline from <a> tag */
+    line-height: 1; /* Ensures text is centered vertically */
+}
+
+.auth-link:hover {
+    background: #000 !important; /* Forces background to black */
+    color: #fff !important;      /* Forces text to white */
+    border-color: #000;
+    opacity: 1 !important;       /* Overrides any opacity issues */
+}
+
+/* Specific styling for the 'Register' or 'Highlighted' version if needed */
+.auth-link.highlighted {
+    background: #000;
+    color: #fff !important;
+}
+
+.auth-link.highlighted:hover {
+    background: #333;
+    border-color: #333;
+}
+
+.auth-zone {
+    display: flex;
+    align-items: center;
+    gap: 24px; /* Space between all your links */
+}
+
+.auth-zone a {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Toast Notification */
+#dashboard-toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #ffffff;
+    border: 2px solid #000;
+    padding: 16px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    display: none; /* Hidden by default */
+    animation: toastSlideIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes toastSlideIn {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.toast-link {
+    color: #000;
+    font-weight: bold;
+    text-decoration: underline;
+    margin-left: 8px;
+}
+
+/* dashboard.css */
+#bmc-container {
+    margin-top: 60px; /* Pushes it down away from the poem lists */
+    padding-top: 30px;
+    border-top: 1px solid #eee; /* Subtle separator line */
+    display: flex;
+    justify-content: center; /* Centers the button horizontally */
+    width: 100%;
+}
+
+/* Ensure the button matches your sharp-corner aesthetic if the script allows */
+.bmc-btn {
+    box-shadow: 4px 4px 0px rgba(0,0,0,0.1) !important;
+    transition: transform 0.2s ease !important;
+}
+
+.bmc-btn:hover {
+    transform: translateY(-2px);
+}

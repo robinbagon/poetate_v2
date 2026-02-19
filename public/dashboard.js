@@ -39,45 +39,32 @@ async function loadDashboard() {
 function renderPoemList(list, elementId, isOwner) {
   const container = document.getElementById(elementId);
   if (!container) return;
-  container.innerHTML = ''; // Clear existing content
+  container.innerHTML = '';
 
   if (!list || list.length === 0) {
     const emptyMsg = document.createElement('p');
     emptyMsg.className = 'empty-list-message';
-    emptyMsg.textContent = isOwner 
-      ? 'Your poems will appear here.' 
-      : 'Shared poems will appear here.';
+    emptyMsg.textContent = isOwner ? 'Your poems will appear here.' : 'Shared poems will appear here.';
     container.appendChild(emptyMsg);
-    return; // 
+    return;
   }
 
   list.forEach(poem => {
     const li = document.createElement('li');
     li.className = 'poem-item';
 
-    // Title Link
     const link = document.createElement('a');
-
-
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
 
     if (isOwner) {
-      // Owners go to the main annotation page
       link.href = `/annotation.html?poemId=${poem._id}`;
     } else {
-      // Guests/Collaborators go to the share page
-      // Find an 'editable' link first, fallback to 'readonly'
       const shareLink = poem.shareLinks.find(l => l.mode === 'editable') || 
                         poem.shareLinks.find(l => l.mode === 'readonly');
-      
-      if (shareLink) {
-        link.href = `/share.html?share=${shareLink.id}`;
-      } else {
-        // Fallback just in case no link exists
-        link.href = `/annotation.html?poemId=${poem._id}`;
-      }
+      link.href = shareLink ? `/share.html?share=${shareLink.id}` : `/annotation.html?poemId=${poem._id}`;
     }
+    
     link.className = 'poem-title';
     link.textContent = poem.title || poem.content.split('\n')[0] || '[Untitled]';
 
@@ -85,8 +72,6 @@ function renderPoemList(list, elementId, isOwner) {
     buttonContainer.className = 'poem-buttons';
 
     if (isOwner) {
-      // --- Owner Buttons (Rename/Share/Delete) ---
-      
       const renameBtn = createBtn('custom-rename-btn', 'Rename', async () => {
         const newTitle = prompt('New title:', link.textContent);
         if (newTitle && newTitle !== link.textContent) {
@@ -107,18 +92,36 @@ function renderPoemList(list, elementId, isOwner) {
         }
       });
 
-      // Simple wrapper for the share fetch logic
+      // ✅ FIXED SHARE LOGIC
       const share = async (mode) => {
-        const res = await fetch(`/api/poems/${poem._id}/share`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ mode })
-        });
-        const data = await res.json();
-        navigator.clipboard.writeText(`${window.location.origin}/share.html?share=${data.shareId}`);
-        alert(`${mode} link copied!`);
-      };
+        try {
+          const res = await fetch(`/api/poems/${poem._id}/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ mode })
+          });
+
+          if (res.status === 401) {
+            alert('Your session has expired. Please log in again.');
+            window.location.href = '/login.html';
+            return;
+          }
+
+          if (!res.ok) throw new Error('Failed to generate link');
+          const data = await res.json();
+
+          if (data.shareId) {
+            navigator.clipboard.writeText(`${window.location.origin}/share.html?share=${data.shareId}`);
+            alert(`${mode} link copied!`);
+          } else {
+            throw new Error('Share ID was undefined');
+          }
+        } catch (err) {
+          console.error('Sharing error:', err);
+          alert('Could not generate share link. Please refresh and try again.');
+        }
+      }; // ✅ Close the share function here
 
       const eyeBtn = createBtn('custom-eye', 'Copy View Link', () => share('readonly'));
       const pencilBtn = createBtn('custom-pencil', 'Copy Edit Link', () => share('editable'));
