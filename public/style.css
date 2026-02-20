@@ -101,6 +101,7 @@ h2 {
   border: 2px solid #000;
   width: 95%;
   Width: 300px;
+  z-index: 1000;
 }
 
 .modal-content textarea {
@@ -110,6 +111,10 @@ h2 {
   outline: none;
   transition: border-color 0.2s;
   min-height: 100px;
+}
+
+#annotationModal {
+    z-index: 1000;
 }
 
 .modal-content textarea:focus {
@@ -221,8 +226,7 @@ h2 {
     top: 0;
     left: 0;
     width: 100%;
-    /* Fixed typo: using height 100% to cover the whole scrollable area */
-    height: 100%; 
+
     pointer-events: none;
     z-index: 1; /* Sit just above the poem text but below the boxes */
 }
@@ -628,13 +632,22 @@ h2 {
 }
 
 .site-header .logo {
-    max-height: 150px;
-    height: auto;
+    /* Default size for Desktop */
+    height: 150px; 
+    width: auto;
+    max-width: 90%; /* Prevents clipping on any screen */
+    transition: height 0.3s ease; /* Optional: smooth transition if resizing browser */
 }
 
-.logo {
-  height: 150px;
-  width: auto;
+/* Mobile Adjustments (Screens smaller than 600px) */
+@media (max-width: 600px) {
+    .site-header .logo {
+        height: 80px; /* Shrinks the logo on phones */
+    }
+    
+    .site-header {
+        padding: 1rem 0 0.5rem 0; /* Tightens up header spacing on mobile */
+    }
 }
 
 /* Base highlight style */
@@ -1017,4 +1030,30 @@ h2 {
 
 .bmc-btn:hover {
     transform: translateY(-2px);
+}
+
+
+/* Subtle Permission Badges */
+.permission-badge {
+    font-size: 0.55rem; /* Slightly smaller */
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    margin-left: 10px;
+    border: 1px solid #ddd; /* Light grey border instead of black */
+    border-radius: 2px;
+    vertical-align: middle;
+    letter-spacing: 0.05em;
+}
+
+.badge-readonly {
+    background-color: transparent; /* Remove the grey background */
+    color: #999; /* Faded grey text */
+    border-color: #eee;
+}
+
+.badge-editable {
+    background-color: transparent; 
+    color: #555; /* Darker grey for editors, but not solid black */
+    border-color: #ccc;
 }

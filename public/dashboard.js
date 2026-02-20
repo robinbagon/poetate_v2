@@ -37,101 +37,121 @@ async function loadDashboard() {
 
 // 3. Helper function to render any list of poems
 function renderPoemList(list, elementId, isOwner) {
-  const container = document.getElementById(elementId);
-  if (!container) return;
-  container.innerHTML = '';
+    const container = document.getElementById(elementId);
+    if (!container) return;
+    container.innerHTML = '';
 
-  if (!list || list.length === 0) {
-    const emptyMsg = document.createElement('p');
-    emptyMsg.className = 'empty-list-message';
-    emptyMsg.textContent = isOwner ? 'Your poems will appear here.' : 'Shared poems will appear here.';
-    container.appendChild(emptyMsg);
-    return;
-  }
-
-  list.forEach(poem => {
-    const li = document.createElement('li');
-    li.className = 'poem-item';
-
-    const link = document.createElement('a');
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-
-    if (isOwner) {
-      link.href = `/annotation.html?poemId=${poem._id}`;
-    } else {
-      const shareLink = poem.shareLinks.find(l => l.mode === 'editable') || 
-                        poem.shareLinks.find(l => l.mode === 'readonly');
-      link.href = shareLink ? `/share.html?share=${shareLink.id}` : `/annotation.html?poemId=${poem._id}`;
+    if (!list || list.length === 0) {
+        const emptyMsg = document.createElement('p');
+        emptyMsg.className = 'empty-list-message';
+        emptyMsg.textContent = isOwner ? 'Your poems will appear here.' : 'Shared poems will appear here.';
+        container.appendChild(emptyMsg);
+        return;
     }
-    
-    link.className = 'poem-title';
-    link.textContent = poem.title || poem.content.split('\n')[0] || '[Untitled]';
 
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'poem-buttons';
+    list.forEach(poem => {
+        const li = document.createElement('li');
+        li.className = 'poem-item';
 
-    if (isOwner) {
-      const renameBtn = createBtn('custom-rename-btn', 'Rename', async () => {
-        const newTitle = prompt('New title:', link.textContent);
-        if (newTitle && newTitle !== link.textContent) {
-          const res = await fetch(`/api/poems/${poem._id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ title: newTitle })
-          });
-          if (res.ok) link.textContent = newTitle;
-        }
-      });
+        const link = document.createElement('a');
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'poem-title';
+        
+        // ✅ 1. Set the Title Text FIRST
+        link.textContent = poem.title || poem.content.split('\n')[0] || '[Untitled]';
 
-      const deleteBtn = createBtn('custom-delete-btn', 'Delete', async () => {
-        if (confirm('Delete this poem?')) {
-          const res = await fetch(`/api/poems/${poem._id}`, { method: 'DELETE', credentials: 'include' });
-          if (res.ok) li.remove();
-        }
-      });
+        if (isOwner) {
+            link.href = `/annotation.html?poemId=${poem._id}`;
+        } else {
+            // ✅ 2. Handle the Badge for Shared Poems
+            const badge = document.createElement('span');
+            badge.className = 'permission-badge';
+            
+            if (poem.myMode === 'editable') {
+                badge.textContent = 'Editor';
+                badge.classList.add('badge-editable');
+            } else {
+                badge.textContent = 'Read Only';
+                badge.classList.add('badge-readonly');
+            }
 
-      // ✅ FIXED SHARE LOGIC
-      const share = async (mode) => {
-        try {
-          const res = await fetch(`/api/poems/${poem._id}/share`, {
+            // ✅ 3. Append the badge AFTER the text is set
+            link.appendChild(badge);
+
+            // Persistent Link Logic
+            if (poem.activeShareId) {
+                link.href = `/share.html?share=${poem.activeShareId}`;
+            } else {
+                link.href = `/annotation.html?poemId=${poem._id}`;
+            }
+        } // End isOwner check
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'poem-buttons';
+
+        if (isOwner) {
+            const renameBtn = createBtn('custom-rename-btn', 'Rename', async () => {
+                const newTitle = prompt('New title:', link.firstChild.textContent);
+                if (newTitle && newTitle !== link.firstChild.textContent) {
+                    const res = await fetch(`/api/poems/${poem._id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ title: newTitle })
+                    });
+                    if (res.ok) link.firstChild.textContent = newTitle;
+                }
+            });
+
+            const share = async (mode) => {
+    try {
+        const res = await fetch(`/api/poems/${poem._id}/share`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ mode })
-          });
+        });
+        
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        
+        navigator.clipboard.writeText(`${window.location.origin}/share.html?share=${data.shareId}`);
 
-          if (res.status === 401) {
-            alert('Your session has expired. Please log in again.');
-            window.location.href = '/login.html';
-            return;
-          }
+        // ✅ Format the label for the alert
+        // "readonly" becomes "Read-only", "editable" becomes "Editable"
+        const displayMode = mode === 'readonly' 
+            ? 'Read-only' 
+            : mode.charAt(0).toUpperCase() + mode.slice(1);
 
-          if (!res.ok) throw new Error('Failed to generate link');
-          const data = await res.json();
+        alert(`${displayMode} link copied!`);
+        
+    } catch (err) { 
+        alert('Error sharing'); 
+    }
+};
 
-          if (data.shareId) {
-            navigator.clipboard.writeText(`${window.location.origin}/share.html?share=${data.shareId}`);
-            alert(`${mode} link copied!`);
-          } else {
-            throw new Error('Share ID was undefined');
-          }
-        } catch (err) {
-          console.error('Sharing error:', err);
-          alert('Could not generate share link. Please refresh and try again.');
+            const deleteBtn = createBtn('custom-delete-btn', 'Delete', async () => {
+                if (confirm('Delete this poem?')) {
+                    const res = await fetch(`/api/poems/${poem._id}`, { method: 'DELETE', credentials: 'include' });
+                    if (res.ok) li.remove();
+                }
+            });
+
+            buttonContainer.append(renameBtn, createBtn('custom-eye', 'View Link', () => share('readonly')), createBtn('custom-pencil', 'Edit Link', () => share('editable')), deleteBtn);
+        } else {
+            const removeBtn = createBtn('custom-delete-btn', 'Remove from list', async () => {
+                if (confirm('Remove this shared poem?')) {
+                    const res = await fetch(`/api/poems/shared/${poem._id}`, { method: 'DELETE', credentials: 'include' });
+                    if (res.ok) li.remove();
+                }
+            });
+            buttonContainer.append(removeBtn);
         }
-      }; // ✅ Close the share function here
 
-      const eyeBtn = createBtn('custom-eye', 'Copy View Link', () => share('readonly'));
-      const pencilBtn = createBtn('custom-pencil', 'Copy Edit Link', () => share('editable'));
-
-      buttonContainer.append(renameBtn, eyeBtn, pencilBtn, deleteBtn);
-    } 
-
-    li.append(link, buttonContainer);
-    container.appendChild(li);
-  });
+        li.append(link, buttonContainer);
+        container.appendChild(li);
+    });
 }
 
 // Mini-helper to create buttons quickly

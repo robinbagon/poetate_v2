@@ -106,24 +106,34 @@ router.get('/usage', async (req, res) => {
 // GET /api/poems/shared-with-me
 router.get('/shared-with-me', async (req, res) => {
   try {
-    // 1. Check if session exists
     if (!req.session || !req.session.userId) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
     const userId = req.session.userId;
 
-    // 2. Find poems where the user is in the collaborators list
-    // Use $in to ensure we are searching the array correctly
+    // ✅ Use dot notation to find the userId inside the collaborator object
     const sharedPoems = await Poem.find({ 
-      collaborators: { $in: [userId] } 
+      'collaborators.userId': userId 
     });
 
-    res.json(sharedPoems);
+    // ✅ Map through poems to attach the correct activeShareId
+    const formattedPoems = sharedPoems.map(poem => {
+    const myEntry = poem.collaborators.find(c => c.userId?.toString() === userId);
+    const myMode = myEntry ? myEntry.mode : 'readonly';
+    const correctLink = poem.shareLinks.find(l => l.mode === myMode);
+
+    return {
+        ...poem._doc,
+        activeShareId: correctLink ? correctLink.id : (poem.shareLinks[0]?.id || null),
+        myMode: myMode // ✅ Explicitly send the mode for the badge
+    };
+});
+
+    res.json(formattedPoems);
   } catch (err) {
-    // This logs the ACTUAL error to your terminal/command prompt
     console.error('SERVER ERROR IN SHARED-WITH-ME:', err);
-    res.status(500).json({ message: 'Server error fetching shared poems', error: err.message });
+    res.status(500).json({ message: 'Server error fetching shared poems' });
   }
 });
 
@@ -217,6 +227,27 @@ router.patch('/:id', ensureAuthenticated, async (req, res) => {
   }
 });
 
+// Removes the current user from the collaborators list of a shared poem
+router.delete('/shared/:id', ensureAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;
 
+    // ✅ Specify that we are pulling an object with a matching userId
+    const poem = await Poem.findByIdAndUpdate(
+      req.params.id,
+      { $pull: { collaborators: { userId: userId } } }, 
+      { new: true }
+    );
+
+    if (!poem) {
+      return res.status(404).json({ message: 'Shared poem not found' });
+    }
+
+    res.status(200).json({ message: 'Access removed successfully' });
+  } catch (err) {
+    console.error('Error removing shared access:', err);
+    res.status(500).json({ message: 'Failed to remove shared access' });
+  }
+});
 
 module.exports = router;
