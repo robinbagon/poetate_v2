@@ -43,25 +43,39 @@ router.post('/register', async (req, res) => {
         await user.save();
 
         // 2. Handle Resend logic in a single background block
-        // We do this in a separate try/catch so a failed email doesn't break the whole registration
         try {
-            // Send the Template Email
+            // Send the Welcome Email using direct HTML
             await resend.emails.send({
                 from: 'Poetate <info@poetate.org>',
                 to: email,
                 subject: 'Welcome to Poetate!',
-                templateId: 'welcome-email', // Ensure this is the "Name" or "ID" from Resend
-                data: {
-                    email: email, 
-                },
+                html: `
+                    <div style="font-family: 'Space Mono', monospace, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #000;">
+                        <h1 style="font-size: 1.5rem; text-transform: uppercase; margin-bottom: 20px; border-bottom: 4px solid #000; padding-bottom: 10px;">Welcome to Poetate</h1>
+                        <p style="line-height: 1.6;">Your account is ready. You can now save your poems, share them with others, and collaborate in real-time.</p>
+                        
+                        <div style="margin: 30px 0;">
+                            <a href="https://poetate.org/dashboard.html" 
+                               style="display: inline-block; padding: 12px 24px; background-color: #000; color: #fff; text-decoration: none; border: 1px solid #000; font-weight: bold; text-transform: uppercase; font-size: 0.8rem;">
+                               Enter Dashboard
+                            </a>
+                        </div>
+
+                        <p style="font-size: 0.8rem; color: #666; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                            This email was sent to ${email} regarding your new account.
+                        </p>
+                    </div>
+                `
             });
 
-            // Add to Audience List
-            await resend.contacts.create({
-                email: email,
-                unsubscribed: false,
-                audienceId: 'your-audience-id-from-resend', 
-            });
+            // Add to Audience List (Keep this if your Audience ID is correct)
+            if (process.env.RESEND_AUDIENCE_ID) {
+                await resend.contacts.create({
+                    email: email,
+                    unsubscribed: false,
+                    audienceId: process.env.RESEND_AUDIENCE_ID, 
+                });
+            }
 
         } catch (resendError) {
             // Log the error but don't stop the user from logging in
@@ -70,8 +84,14 @@ router.post('/register', async (req, res) => {
 
         // 3. Set session and handle pending poems
         req.session.userId = user._id;
+        
         if (pendingPoemId) {
-            await Poem.findOneAndUpdate({ _id: pendingPoemId, userId: null }, { userId: user._id });
+            // Link the poem created as a guest to the new user
+            await Poem.findOneAndUpdate(
+                { _id: pendingPoemId, userId: null }, 
+                { userId: user._id }
+            );
+            console.log(`✅ Guest poem ${pendingPoemId} linked to new user ${user._id}`);
         }
         
         res.status(201).json({ message: 'Registration successful' });
@@ -82,36 +102,56 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// 3. FORGOT PASSWORD
+/// 3. FORGOT PASSWORD
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
         const user = await User.findOne({ email });
-        // Standard security practice: don't reveal if user exists
-        if (!user) return res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
+        
+        // Security: Don't reveal if user exists
+        if (!user) {
+            return res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
+        }
 
         const token = crypto.randomBytes(20).toString('hex');
         user.resetPasswordToken = token;
-        user.resetPasswordExpires = Date.now() + 3600000; 
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
         await user.save();
 
         const resetUrl = `https://poetate.org/reset-password/${token}`;
 
-        // Call Resend using the Template
-        await resend.emails.send({
+        // 🚀 Sending HTML directly via the SDK
+        const { data, error } = await resend.emails.send({
             from: 'Poetate <info@poetate.org>',
             to: user.email,
             subject: 'Poetate Password Reset',
-            templateId: 'password-reset', // Must match name in Resend Dashboard
-            data: {
-                resetUrl: resetUrl // Maps to {{resetUrl}} in the HTML
-            }
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
+                    <h2 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 10px;">Poetate</h2>
+                    <p>You requested a password reset for your account.</p>
+                    <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+                    <div style="margin: 30px 0;">
+                        <a href="${resetUrl}" style="background-color: #000; color: #fff; padding: 12px 25px; text-decoration: none; font-weight: bold; display: inline-block;">Reset Password</a>
+                    </div>
+                    <p style="color: #666; font-size: 0.8rem;">If you didn't request this, you can safely ignore this email.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
+                    <p style="font-size: 0.7rem; color: #999;">poetate.org</p>
+                </div>
+            `
         });
 
-        res.status(200).json({ message: 'Reset email sent' });
+        if (error) {
+            console.error('Resend SDK Error:', error);
+            // We still return 200 for security
+        } else {
+            console.log('✅ Reset email sent successfully:', data.id);
+        }
+
+        res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
+
     } catch (err) {
         console.error('Forgot password error:', err);
-        res.status(500).json({ message: 'Error sending reset email' });
+        res.status(200).json({ message: 'If that account exists, a reset link has been sent.' });
     }
 });
 
