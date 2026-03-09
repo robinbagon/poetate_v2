@@ -1,56 +1,32 @@
 // public/editAnnotation.js
 import { annotationService } from './annotationService.js';
 
-export function makeEditable(boxElement, annotationId, annotationData, onUpdate) {
-    const enableEditing = () => {
-        const originalText = annotationData.text;
-        const textarea = document.createElement('textarea');
-        textarea.value = originalText;
-        textarea.className = 'annotation-edit';
+export function makeEditable(boxElement, annotationId, annotationData, onUpdate, modal, textarea) {
+    boxElement.addEventListener('click', (e) => {
+        // 🛡️ THE FIX: If the box was just dragged, don't open the modal
+        if (boxElement.classList.contains('dragging')) {
+            return; 
+        }
 
-        boxElement.innerHTML = '';
-        boxElement.appendChild(textarea);
+        e.stopPropagation();
+
+        // Fill and show modal
+        textarea.value = annotationData.text;
+        const rect = boxElement.getBoundingClientRect();
+        modal.style.display = 'block';
+        modal.style.position = 'absolute';
+        modal.style.top = `${rect.top + window.scrollY}px`;
+        modal.style.left = `${rect.left + window.scrollX}px`;
+
+        modal.dataset.editingId = annotationData._id; 
         textarea.focus();
-
-        textarea.addEventListener('blur', async () => {
-            const newText = textarea.value.trim();
-
-            if (newText && newText !== originalText) {
-                // CALL THE SERVICE
-                const success = await annotationService.updateText(
-                    annotationData._id, 
-                    newText, 
-                    annotationData.annotationId, 
-                    annotationData.poemId
-                );
-
-                if (success) {
-                    annotationData.text = newText;
-                    onUpdate(newText);
-                } else {
-                    alert('Failed to update.');
-                    onUpdate(originalText);
-                }
-            } else {
-                onUpdate(originalText);
-            }
-        });
-    };
-
-    // Desktop: double-click to edit
-    boxElement.addEventListener('dblclick', enableEditing);
-
-    // Touch: single tap to edit
-    let touchStartTime = 0;
-    boxElement.addEventListener('touchstart', () => {
-        touchStartTime = Date.now();
     });
 
-    boxElement.addEventListener('touchend', e => {
-        const duration = Date.now() - touchStartTime;
-        if (duration < 300) {
-            e.preventDefault(); // prevent accidental zoom
-            enableEditing();
+
+    boxElement.addEventListener('click', (e) => {
+        // Prevent opening if the user was just dragging the box
+        if (!boxElement.classList.contains('dragging')) {
+            openModalForEditing(e);
         }
     });
 }

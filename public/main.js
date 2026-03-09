@@ -37,7 +37,10 @@ async function loadPoemAndRender() {
         const modulePath = isTouchDevice ? './annotations-touch.js' : './annotations.js';
         console.log(`Mode: ${forcedMode || 'auto'} | Loading: ${modulePath}`);
 
-
+        const tidyBtn = document.getElementById('tidyAnnotationsBtn');
+        if (tidyBtn) {
+        tidyBtn.style.display = isTouchDevice ? 'none' : 'inline-block';
+        }
         
         try {
             const module = await import(modulePath);

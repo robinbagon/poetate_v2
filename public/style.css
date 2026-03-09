@@ -226,6 +226,7 @@ h2 {
     top: 0;
     left: 0;
     width: 100%;
+    min-height: 100%;
 
     pointer-events: none;
     z-index: 1; /* Sit just above the poem text but below the boxes */
@@ -1056,4 +1057,43 @@ h2 {
     background-color: transparent; 
     color: #555; /* Darker grey for editors, but not solid black */
     border-color: #ccc;
+}
+
+.nav-btn-tidy {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid #000;
+    color: #000;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace; /* Matching the other buttons */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 2px;
+}
+
+.nav-btn-tidy:hover {
+    background: #000 !important;
+    color: #fff !important;
+    border-color: #000;
+}
+
+.nav-btn-tidy:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    /* Optional: prevent hover effect when disabled */
+    pointer-events: none; 
+}
+
+.annotation-box {
+    /* ... existing styles ... */
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                left 0.4s ease-in-out;
+}
+
+/* Disable transition during manual dragging so it doesn't feel laggy */
+.annotation-box.dragging {
+    transition: none;
 }

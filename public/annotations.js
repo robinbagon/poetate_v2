@@ -4,6 +4,7 @@ import { drawLine, resizeSvgLayer, redrawAllLines } from './lines.js';
 import { makeEditable } from './editAnnotation.js';
 import { annotationService } from './annotationService.js';
 import { authUI } from './authUI.js';
+import { tidyAnnotations } from './layoutManager.js';
 import socket from './socket.js';
 
 const annotationBoxes = new Map();
@@ -13,6 +14,7 @@ let selectedSpanIndices = [];
 let currentZIndex = 100; 
 
 let nextColorIndex = 0;
+let isReadOnlyMode = false;
 const maxColors = 8; 
 
 function getNextHighlightClass() {
@@ -28,6 +30,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ✅ Clean initAnnotations (No stray brackets)
 export async function initAnnotations({ poemId = null, readOnly = false } = {}) {
+
+    if (!poemId) {
+        poemId = new URLSearchParams(window.location.search).get('poemId');
+    }
+
+    const tidyBtn = document.getElementById('tidyAnnotationsBtn');
+    
+    if (tidyBtn) {
+        tidyBtn.addEventListener('click', async () => {
+            // Check if we actually have a poemId before proceeding
+            if (!poemId) {
+                console.error("Cannot tidy: No poemId found.");
+                return;
+            }
+
+            tidyBtn.disabled = true;
+            const originalContent = tidyBtn.innerHTML;
+            tidyBtn.innerHTML = '✨ Organizing...';
+
+            try {
+                // Pass the locally available poemId here
+                await tidyAnnotations(annotationBoxes, poemId);
+            } catch (err) {
+                console.error("Cleanup failed:", err);
+            } finally {
+                tidyBtn.disabled = false;
+                tidyBtn.innerHTML = originalContent;
+            }
+        });
+    }
+
+    isReadOnlyMode = readOnly;
     const poemContent = document.getElementById('poemContent');
     const annotationModal = document.getElementById('annotationModal');
     const annotationText = document.getElementById('annotationText');
@@ -84,58 +118,97 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
     }
 
     saveAnnotationButton.addEventListener('click', async () => {
-        if (readOnly) return;
-        const text = annotationText.value.trim();
-        
-        if (text && selectedSpanIndices.length > 0) {
-            const highlightClass = getNextHighlightClass();
-            const annotationId = generateAnnotationId();
-            const highlightText = selectedSpanIndices.map(index => {
-                const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
-                return span ? span.textContent : '';
-            }).join(' ');
+    if (readOnly) return;
+    const text = annotationText.value.trim();
+    if (!text) return;
 
-            const annotationData = {
-                annotationId,
-                text,
-                highlight: highlightText,
-                wordIndices: selectedSpanIndices,
-                colorClass: highlightClass,
+    // 1. Check if we are UPDATING an existing annotation
+    const editingId = annotationModal.dataset.editingId;
+
+    if (editingId) {
+        try {
+            const annotationData = annotationsMap.get(editingId);
+            // Call the service to update the database
+            const success = await annotationService.updateText(
+                editingId, 
+                text, 
+                annotationData.annotationId, 
                 poemId
-            };
+            );
 
-            try {
-                const saved = await annotationService.save(annotationData);
-                annotationData._id = saved._id;
-                annotationsMap.set(annotationData._id, annotationData);
-
-                selectedSpanIndices.forEach(index => {
+            if (success) {
+                // Update the local Map and UI Box
+                annotationData.text = text;
+                const entry = annotationBoxes.get(editingId);
+                if (entry) {
+                    entry.box.textContent = text;
+                }
+                
+                // Also update the hover titles on the poem words
+                annotationData.wordIndices.forEach(index => {
                     const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
-                    if (span) {
-                        span.dataset.annotationId = annotationId;
-                        span.classList.add('highlight', highlightClass);
-                        span.title = text;
-                    }
+                    if (span) span.title = text;
                 });
-
-                renderAnnotationBox(annotationData, readOnly, highlightClass);
-                addHoverListenersForAnnotation(annotationId);
-
-                annotationText.value = '';
-                annotationModal.style.display = 'none';
-                selectedSpanIndices = [];
-            } catch (err) {
-                console.error('Failed to save:', err);
-                alert('Could not save annotation.');
             }
+        } catch (err) {
+            console.error('Failed to update:', err);
+            alert('Could not update annotation.');
         }
-    });
+    } 
+    // 2. Otherwise, we are CREATING a new one (your original logic)
+    else if (selectedSpanIndices.length > 0) {
+        const highlightClass = getNextHighlightClass();
+        const annotationId = generateAnnotationId();
+        const highlightText = selectedSpanIndices.map(index => {
+            const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
+            return span ? span.textContent : '';
+        }).join(' ');
 
-    cancelAnnotationButton.addEventListener('click', () => {
-        annotationModal.style.display = 'none';
-        selectedSpanIndices = [];
-    });
-} // <--- initAnnotations ends here cleanly
+        const annotationData = {
+            annotationId,
+            text,
+            highlight: highlightText,
+            wordIndices: selectedSpanIndices,
+            colorClass: highlightClass,
+            poemId
+        };
+
+        try {
+            const saved = await annotationService.save(annotationData);
+            annotationData._id = saved._id;
+            annotationsMap.set(annotationData._id, annotationData);
+
+            selectedSpanIndices.forEach(index => {
+                const span = poemContent.querySelector(`.poem-word[data-word-index="${index}"]`);
+                if (span) {
+                    span.dataset.annotationId = annotationId;
+                    span.classList.add('highlight', highlightClass);
+                    span.title = text;
+                }
+            });
+
+            renderAnnotationBox(annotationData, readOnly, highlightClass);
+            addHoverListenersForAnnotation(annotationId);
+        } catch (err) {
+            console.error('Failed to save:', err);
+            alert('Could not save annotation.');
+        }
+    }
+
+    // --- CLEANUP ---
+    // Hide modal and clear temporary state
+    annotationText.value = '';
+    annotationModal.style.display = 'none';
+    delete annotationModal.dataset.editingId; // Critical: clear the editing flag
+    selectedSpanIndices = [];
+});
+
+// Also update the cancel button to clear the editing state
+cancelAnnotationButton.addEventListener('click', () => {
+    annotationModal.style.display = 'none';
+    delete annotationModal.dataset.editingId;
+    selectedSpanIndices = [];
+}); // <--- initAnnotations ends here cleanly
 
 
 
@@ -268,15 +341,17 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
     box.dataset.annotationId = annotationData.annotationId;
     box.textContent = annotationData.text;
 
-    // Apply highlight class if provided
     if (highlightClass) {
         box.classList.add(highlightClass);
-        annotationData.colorClass = highlightClass; // store for later removal
+        annotationData.colorClass = highlightClass; 
     }
 
     document.body.appendChild(box);
 
-    // Store entry **before** calling position logic
+    // Force a reflow so offsetHeight is accurate for the collision logic
+    const boxHeight = box.offsetHeight;
+
+    // Store entry before calling position logic so it's "visible" to other boxes
     annotationBoxes.set(annotationData._id, {
         box,
         targetSpan,
@@ -292,10 +367,25 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
         box.style.left = `${baseX + dx}px`;
         box.style.top = `${baseY + dy}px`;
     } else {
+        // 1. Run the smart collision logic to find a clear spot
         updateAnnotationBoxPosition(annotationData._id);
+
+        // 2. Capture the results and write to the Database
+        if (!readOnly) {
+            const spanRect = targetSpan.getBoundingClientRect();
+            const boxRect = box.getBoundingClientRect();
+
+            // Calculate the relative offset from the target word
+            annotationData.relativePosition = {
+                dx: (boxRect.left + window.scrollX) - (spanRect.left + window.scrollX),
+                dy: (boxRect.top + window.scrollY) - (spanRect.top + window.scrollY)
+            };
+
+            // 3. Persist to DB so iPad users get these exact coordinates
+            updateAnnotationPosition(annotationData);
+        }
     }
 
-    // Apply z-index
     box.style.zIndex = currentZIndex++;
 
     // Hover styling
@@ -312,7 +402,7 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
     // Draw connecting line
     const line = drawLine(targetSpan, box, annotationData.annotationId);
 
-    // Store reference
+    // Update reference with the line included
     annotationBoxes.set(annotationData._id, {
         box,
         targetSpan,
@@ -320,83 +410,65 @@ function renderAnnotationBox(annotationData, readOnly = false, highlightClass = 
         line
     });
 
-    // Only allow dragging and editing if not read-only
     if (!readOnly) {
-        makeDraggable(box, annotationData._id);
+        // Device-aware dragging (iPad vs Desktop)
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isTouch && typeof setupTouchListeners === 'function') {
+            setupTouchListeners(box, annotationData);
+        } else {
+            makeDraggable(box, annotationData._id);
+        }
+
         makeEditable(box, annotationData.annotationId, annotationData, (updatedText) => {
             box.textContent = updatedText;
+        },
+        document.getElementById('annotationModal'),
+        document.getElementById('annotationText')
+        );
+
+        // Right-click to delete
+        box.addEventListener('contextmenu', async (e) => {
+            e.preventDefault();
+            if (!confirm('Delete this annotation?')) return;
+
+            const annotationId = annotationData._id;
+            const success = await annotationService.delete(
+                annotationId, 
+                annotationData.annotationId, 
+                annotationData.poemId
+            );
+            if (!success) return;
+
+            const entry = annotationBoxes.get(annotationId);
+            const { box: b, line: l, annotation: ann } = entry;
+
+            ann.wordIndices.forEach(index => {
+                const span = document.querySelector(`.poem-word[data-word-index="${index}"]`);
+                if (!span) return;
+                if (ann.colorClass) span.classList.remove(ann.colorClass);
+                let count = parseInt(span.dataset.highlightCount || '1', 10);
+                count = Math.max(0, count - 1);
+                if (count > 0) {
+                    span.dataset.highlightCount = count;
+                } else {
+                    delete span.dataset.annotationId;
+                    delete span.dataset.annotationClass;
+                    delete span.dataset.highlightCount;
+                    span.removeAttribute('title');
+                    span.classList.remove('highlight', 'highlighted', 'hovered', 'highlight-glow');
+                    const newSpan = span.cloneNode(true);
+                    span.parentNode.replaceChild(newSpan, span);
+                }
+            });
+
+            if (l) l.remove();
+            if (b) b.remove();
+            annotationBoxes.delete(annotationId);
+            annotationsMap.delete(annotationId);
+            socket.emit('delete-annotation', { _id: annotationId, poemId: ann.poemId });
         });
-
-        // Right-click to delete annotation box
-
-box.addEventListener('contextmenu', async (e) => {
-        e.preventDefault();
-
-        // Ask once only
-        if (!confirm('Delete this annotation?')) return;
-
-        const annotationId = annotationData._id;
-        const success = await annotationService.delete(
-        annotationId, 
-        annotationData.annotationId, 
-        annotationData.poemId
-);
-        if (!success) return;
-
-        const { box, line, annotation } = annotationBoxes.get(annotationId);
-
-       // Remove highlights from associated words
-annotation.wordIndices.forEach(index => {
-    const span = document.querySelector(`.poem-word[data-word-index="${index}"]`);
-    if (!span) return;
-
-    // Remove only the color class for THIS deleted annotation
-    if (annotation.colorClass) {
-        span.classList.remove(annotation.colorClass);
-    }
-
-    // Decrease highlight count
-    let count = parseInt(span.dataset.highlightCount || '1', 10);
-    count = Math.max(0, count - 1);
-
-    if (count > 0) {
-        // Update dataset with remaining count
-        span.dataset.highlightCount = count;
-        span.title = `Highlighted ${count} time${count > 1 ? 's' : ''}`;
-    } else {
-        // If no highlights left, remove ALL annotation-related data & hover effects
-        delete span.dataset.annotationId;
-        delete span.dataset.annotationClass;
-        delete span.dataset.highlightCount;
-        span.removeAttribute('title');
-
-        span.classList.remove('highlight', 'highlighted', 'hovered', 'highlight-glow');
-
-        // Remove hover event listeners (clone trick)
-        const newSpan = span.cloneNode(true);
-        span.parentNode.replaceChild(newSpan, span);
-    }
-});
-
-
-
-        if (line) line.remove();
-        if (box) box.remove();
-
-        annotationBoxes.delete(annotationId);
-        annotationsMap.delete(annotationId);
-
-        socket.emit('delete-annotation', { 
-            _id: annotationId,
-            annotationId: annotation.annotationId,
-            poemId: annotation.poemId
-             });
-    });
-
-
     }
 }
-
 
 
 function updateAnnotationBoxPosition(annotationId) {
@@ -412,8 +484,14 @@ function updateAnnotationBoxPosition(annotationId) {
     const sidePadding = 20;
     const verticalSpacing = 10;
 
-    const boxWidth = box.offsetWidth;
+    // Standardize to Document-relative coordinates
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
 
+    const boxWidth = box.offsetWidth;
+    const boxHeight = box.offsetHeight;
+
+    // 1. Initial Horizontal Positioning
     const spanCenter = spanRect.left + spanRect.width / 2;
     const poemCenter = (poemRect.left + poemRect.right) / 2;
     const preferRight = spanCenter > poemCenter;
@@ -421,51 +499,53 @@ function updateAnnotationBoxPosition(annotationId) {
     const enoughSpaceRight = (poemRect.right + sidePadding + boxWidth < window.innerWidth);
     const enoughSpaceLeft = (poemRect.left - sidePadding - boxWidth > 0);
 
-    let placeOnRight;
-    if (preferRight && enoughSpaceRight) {
-        placeOnRight = true;
-    } else if (!preferRight && enoughSpaceLeft) {
-        placeOnRight = false;
-    } else if (enoughSpaceRight) {
-        placeOnRight = true;
-    } else {
-        placeOnRight = false;
-    }
+    let placeOnRight = (preferRight && enoughSpaceRight) || (!enoughSpaceLeft && enoughSpaceRight);
 
     let x = placeOnRight
-        ? poemRect.right + sidePadding
-        : poemRect.left - sidePadding - boxWidth;
+        ? poemRect.right + scrollX + sidePadding
+        : poemRect.left + scrollX - sidePadding - boxWidth;
 
-    let y = spanRect.top + window.scrollY;
+    // 2. Initial Vertical Positioning (Document-relative)
+    let y = spanRect.top + scrollY;
 
-    // Avoid overlaps
+    // 3. Collision Loop (Using Document-relative math for EVERYTHING)
     let collision = true;
-    while (collision) {
-        collision = false;
-        annotationBoxes.forEach(({ box: otherBox }, id) => {
-            if (id === annotationId) return;
-            const otherRect = otherBox.getBoundingClientRect();
-            const otherLeft = otherRect.left + window.scrollX;
-            const otherTop = otherRect.top + window.scrollY;
-            const otherRight = otherLeft + otherRect.offsetWidth;
-            const otherBottom = otherTop + otherBox.offsetHeight;
+    let safetyCounter = 0; // Prevent infinite loops
 
+    while (collision && safetyCounter < 50) {
+        collision = false;
+        safetyCounter++;
+
+        for (const [id, other] of annotationBoxes.entries()) {
+            if (id === annotationId) continue;
+
+            const otherBox = other.box;
+            const otherRect = otherBox.getBoundingClientRect();
+            
+            // Convert 'other' to Document-relative
+            const otherTop = otherRect.top + scrollY;
+            const otherBottom = otherTop + otherBox.offsetHeight;
+            const otherLeft = otherRect.left + scrollX;
+            const otherRight = otherLeft + otherBox.offsetWidth;
+
+            // Check overlap
             if (
                 x < otherRight &&
-                x + box.offsetWidth > otherLeft &&
+                x + boxWidth > otherLeft &&
                 y < otherBottom &&
-                y + box.offsetHeight > otherTop
+                y + boxHeight > otherTop
             ) {
                 y = otherBottom + verticalSpacing;
                 collision = true;
+                // Once we collide, we move y and restart the check against all boxes
+                break; 
             }
-        });
+        }
     }
 
     box.style.left = `${x}px`;
     box.style.top = `${y}px`;
 }
-
 
 function makeDraggable(el, annotationId) {
     let offsetX, offsetY;
@@ -482,6 +562,10 @@ function makeDraggable(el, annotationId) {
 
         function onMouseMove(moveEvent) {
             // Use pageX/pageY instead of clientX/clientY
+            el.style.left = `${moveEvent.pageX - offsetX}px`;
+            el.style.top  = `${moveEvent.pageY - offsetY}px`;
+            el.classList.add('dragging');
+
             el.style.left = `${moveEvent.pageX - offsetX}px`;
             el.style.top  = `${moveEvent.pageY - offsetY}px`;
 
@@ -532,7 +616,10 @@ function makeDraggable(el, annotationId) {
             };
 
             annotationService.updatePosition(annotation);
-        }
+            setTimeout(() => {
+            el.classList.remove('dragging');
+            }, 100);
+            }
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
@@ -696,4 +783,4 @@ socket.emit('update-annotation-position', {
         console.error('Error updating annotation position:', err);
     }
 }
-
+}
