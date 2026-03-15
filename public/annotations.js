@@ -94,19 +94,33 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
     await loadExistingAnnotations(poemId, readOnly);
 
     window.addEventListener('resize', () => {
-        resizeSvgLayer(); 
-        for (const [id, data] of annotationBoxes.entries()) {
-            const { annotation, box, targetSpan } = data;
-            if (annotation.relativePosition) {
-                const { dx, dy } = annotation.relativePosition;
-                const spanRect = targetSpan.getBoundingClientRect();
-                box.style.left = `${spanRect.left + window.scrollX + dx}px`;
-                box.style.top  = `${spanRect.top + window.scrollY + dy}px`;
-            } else {
-                updateAnnotationBoxPosition(id);
-            }
+    
+    resizeSvgLayer(); 
+    const svg = document.getElementById('annotation-lines');
+    if (svg) svg.innerHTML = ''; 
+
+    for (const [id, data] of annotationBoxes.entries()) {
+        const { annotation, box, targetSpan } = data;
+        if (!box || !targetSpan) continue;
+
+        box.style.transition = 'none';
+
+        if (annotation.relativePosition) {
+            const { dx, dy } = annotation.relativePosition;
+            const spanRect = targetSpan.getBoundingClientRect();
+            
+            box.style.left = `${spanRect.left + window.scrollX + dx}px`;
+            box.style.top  = `${spanRect.top + window.scrollY + dy}px`;
+        } else {
+            updateAnnotationBoxPosition(id);
         }
-        redrawAllLines(annotationBoxes);
+
+        setTimeout(() => {
+            drawLine(targetSpan, box, id);
+            
+            box.style.transition = 'transform 0.1s ease, box-shadow 0.1s ease';
+        }, 0);
+    }
     });
 
     if (!readOnly && poemContent) {

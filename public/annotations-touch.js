@@ -329,22 +329,45 @@ saveAnnotationButton.addEventListener('click', async () => {
 
   // Resize handling
   window.addEventListener('resize', () => {
-    for (const [annotationId, { annotation, box, targetSpan }] of annotationBoxes.entries()) {
-      if (annotation.relativePosition) {
-        const { dx, dy } = annotation.relativePosition;
-        const spanRect = targetSpan.getBoundingClientRect();
-        const baseX = spanRect.left + window.scrollX;
-        const baseY = spanRect.top + window.scrollY;
-        box.style.left = `${baseX + dx}px`;
-        box.style.top = `${baseY + dy}px`;
-      } else {
-        updateAnnotationBoxPosition(annotationId);
-      }
-      redrawAllLines(annotationBoxes);
+    // 1. Prepare the SVG Layer
+    const svg = document.getElementById('annotation-lines');
+    if (svg) {
+        svg.setAttribute('width', document.documentElement.scrollWidth);
+        svg.setAttribute('height', document.documentElement.scrollHeight);
     }
-  });
 
-  // near your existing window.addEventListener('resize', ...) block
+    for (const [id, data] of annotationBoxes.entries()) {
+        const { annotation, box, targetSpan } = data;
+        if (!box || !targetSpan) continue;
+
+        
+        box.style.animation = 'none';
+        box.style.transition = 'none';
+
+        if (annotation.relativePosition) {
+            const { dx, dy } = annotation.relativePosition;
+            const spanRect = targetSpan.getBoundingClientRect();
+            
+            // Calculate new position instantly
+            const newLeft = spanRect.left + window.scrollX + dx;
+            const newTop  = spanRect.top + window.scrollY + dy;
+            
+            box.style.left = `${newLeft}px`;
+            box.style.top  = `${newTop}px`;
+        } else {
+            updateAnnotationBoxPosition(id);
+        }
+
+        setTimeout(() => {
+            drawLine(targetSpan, box, id);
+            
+            
+            box.style.transition = 'transform 0.1s ease, box-shadow 0.1s ease';
+        }, 0);
+    }
+});
+
+  
 window.addEventListener('scroll', () => {
   // If you store annotationBoxes keyed by annotationId (as you do), iterate them
   for (const [annotationId, { annotation, box, targetSpan }] of annotationBoxes.entries()) {
@@ -364,8 +387,6 @@ window.addEventListener('scroll', () => {
     }
   }
 
-  // Recalculate/redraw the SVG/paths for every annotation
-  // Assumes your function redrawAllLines(annotationBoxes) recomputes using getBoundingClientRect()
   redrawAllLines(annotationBoxes);
 }, { passive: true });
 
