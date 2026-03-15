@@ -720,39 +720,27 @@ h2 {
     z-index: 1;
 }
 
-
-
 /* Floating Annotate Button - Industrial Style */
 .annotate-floating-btn {
     position: absolute;
     display: none;
     z-index: 9999;
-    
-    /* Typography: Matching your 'Space Mono' theme */
     font-family: 'Space Mono', monospace;
     font-size: 14px;
     letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: bold;
     color: #fff;
-    
-    /* Colors: High-contrast black/dark gray instead of green */
     background-color: #000;
-    
-    /* Layout: Precise and sharp */
     padding: 0 20px;
-    height: 48px; /* Slightly larger for better touch ergonomics */
+    height: 48px; 
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    /* Border & Shadow: Sharp corners, industrial block shadow */
     border: 2px solid #000;
-    border-radius: 0; /* Sharp corners match the boxes */
+    border-radius: 0; 
     cursor: pointer;
-    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2); /* Matching the box-shadow style */
-    
-    /* Smoothness but no "squish" */
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2); 
     transition: transform 0.05s, box-shadow 0.05s;
     user-select: none;
     -webkit-user-select: none;
@@ -762,7 +750,6 @@ h2 {
 /* Feedback when tapped: "Mechanical" feel */
 .annotate-floating-btn:active {
     background-color: #333;
-    /* The button "sinks" into the page by removing the shadow */
     transform: translate(2px, 2px);
     box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.2);
 }

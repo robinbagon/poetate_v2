@@ -36,6 +36,7 @@ export async function initAnnotations({ poemId = null, readOnly = false } = {}) 
 const annotateButton = document.createElement('button');
 annotateButton.innerText = 'Annotate';
 annotateButton.className = 'annotate-floating-btn';
+annotateButton.style.display = 'none';
 document.body.appendChild(annotateButton);
 
 // Dismiss button when touching elsewhere
