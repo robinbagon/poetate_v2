@@ -138,7 +138,7 @@ function renderPoemList(list, elementId, isOwner) {
                 }
             });
 
-            buttonContainer.append(renameBtn, createBtn('custom-eye', 'View Link', () => share('readonly')), createBtn('custom-pencil', 'Edit Link', () => share('editable')), deleteBtn);
+            buttonContainer.append(renameBtn, createBtn('custom-eye', 'Read-only Link', () => share('readonly')), createBtn('custom-pencil', 'Editable Link', () => share('editable')), deleteBtn);
         } else {
             const removeBtn = createBtn('custom-delete-btn', 'Remove from list', async () => {
                 if (confirm('Remove this shared poem?')) {

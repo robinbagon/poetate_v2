@@ -17,11 +17,13 @@ export function resizeSvgLayer() {
  */
 export function drawLine(startElem, endElem, annotationId) {
     const svg = document.getElementById('annotation-lines');
-    if (!svg) return;
+    if (!svg || !startElem || !endElem) return;
 
+    // 1. Get the Rects
     const startRect = startElem.getBoundingClientRect();
     const endRect = endElem.getBoundingClientRect();
 
+    // 2. Calculate Coordinates
     const startX = startRect.left + startRect.width / 2 + window.scrollX;
     const startY = startRect.top + startRect.height / 2 + window.scrollY;
     const endX   = endRect.left + endRect.width / 2 + window.scrollX;
@@ -29,44 +31,30 @@ export function drawLine(startElem, endElem, annotationId) {
 
     const curveAmount = 50;
     const midX = (startX + endX) / 2;
-    const d = `M ${startX},${startY} 
-               C ${startX + curveAmount},${startY} 
-                 ${midX - curveAmount},${endY} 
-                 ${endX},${endY}`;
+    const d = `M ${startX},${startY} C ${startX + curveAmount},${startY} ${midX - curveAmount},${endY} ${endX},${endY}`;
 
-    annotationId = annotationId || endElem.dataset.annotationId || endElem.getAttribute('data-annotation-id');
+    // 3. 🎯 THE CRITICAL FIX: Ensure ID consistency
+    const id = annotationId; 
+    if (!id) return;
 
-    if (!annotationId) {
-        annotationId = `tmp-${Math.random().toString(36).slice(2, 9)}`;
-        endElem.dataset.annotationId = annotationId;
-    }
-
-    let path = svg.querySelector(`.annotation-line[data-annotation-id="${annotationId}"]`);
+    // 4. Find the path - Use ID attribute for faster/more reliable lookup
+    let path = svg.querySelector(`path[data-annotation-id="${id}"]`);
 
     if (!path) {
         path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('data-annotation-id', annotationId);
+        path.setAttribute('data-annotation-id', id);
         path.classList.add('annotation-line');
-        path.classList.add('line-new');
         svg.appendChild(path);
-        } else {
-        // Remove the entry animation class if it's just a redraw/move
-        path.classList.remove('line-new');
     }
 
+    // 5. Update the path data
     path.setAttribute('d', d);
 
-    /** * NEW: Sync Color Class
-     * Look for 'highlight-X' on the startElem (the poem word) 
-     * and apply it to the line.
-     */
+    // 6. Sync Colors (Simplified)
     const colorClass = Array.from(startElem.classList).find(cls => cls.startsWith('highlight-'));
     if (colorClass) {
-        // Remove any old highlight classes and add the current one
-        path.classList.forEach(cls => {
-            if (cls.startsWith('highlight-')) path.classList.remove(cls);
-        });
-        path.classList.add(colorClass);
+        // Remove old highlights and add current one
+        path.setAttribute('class', `annotation-line ${colorClass}`);
     }
 
     return path;

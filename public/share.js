@@ -1,52 +1,51 @@
 // share.js
-
 import { renderPoem } from './renderPoem.js';
-import { initAnnotations } from './annotations.js';
+// ❌ REMOVED: import { initAnnotations } from './annotations.js'; 
+// (We load this dynamically now)
 
-const poemContentDiv = document.getElementById('poemContent');
-const banner = document.getElementById('sharingBanner');
-const authBar = document.getElementById('authStatus');
-
-// ✅ Only use share ID from URL
 const urlParams = new URLSearchParams(window.location.search);
-const shareId = urlParams.get('share'); // ?share=...
+const shareId = urlParams.get('share');
 
 if (!shareId) {
-  alert('Invalid or missing share link.');
-  window.location.href = '/';
-}
-
-// 2. Add a debug log to verify it's working
-console.log("Current Share ID:", shareId);
-
-if (!shareId || shareId === 'undefined') {
-    console.error("No valid share ID found in URL.");
-    // Optionally: window.location.href = '/'; 
+    alert('Invalid or missing share link.');
+    window.location.href = '/';
 }
 
 async function loadSharedContent() {
     try {
-        // Use the shareId captured above
         const response = await fetch(`/api/shares/${shareId}`);
         if (!response.ok) throw new Error('Share not found');
-
         const { poem, annotations, editable } = await response.json();
 
         renderPoem(poem.content);
 
-        const banner = document.getElementById('sharingBanner');
-        banner.textContent = editable ? 'Shared - Editable' : 'Shared - Read-Only';
-        banner.className = editable ? 'banner edit-mode' : 'banner view-mode';
+        // ✅ RESTORED: Update the Banner UI
+        const bannerElement = document.getElementById('sharingBanner');
+        if (bannerElement) {
+            bannerElement.textContent = editable ? 'Shared - Editable' : 'Shared - Read-Only';
+            bannerElement.className = `status-zone banner ${editable ? 'edit-mode' : 'view-mode'}`;
+        }
 
-        initAnnotations({
+        // ✅ TRAFFIC CONTROLLER
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        
+        // Dynamically load the module
+        const modulePath = isTouch ? './annotations-touch.js' : './annotations.js';
+        const annotationModule = await import(modulePath);
+
+        console.log(`System: Loading ${isTouch ? 'Touch' : 'Desktop'} logic`);
+
+        // Initialize with the data from the server
+        annotationModule.initAnnotations({
             poemId: poem._id,
-            annotations,
+            annotations: annotations, // Pass initial annotations
             readOnly: !editable
         });
 
     } catch (err) {
         console.error('Error loading shared content:', err);
-        alert('Unable to load shared poem.');
+        const bannerElement = document.getElementById('sharingBanner');
+        if (bannerElement) bannerElement.textContent = 'Error loading shared poem';
     }
 }
 

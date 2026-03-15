@@ -1,4 +1,3 @@
-// public/annotationService.js
 import socket from './socket.js';
 
 export const annotationService = {
@@ -6,7 +5,7 @@ export const annotationService = {
         const response = await fetch(`/api/annotations/${poemId}`);
         if (!response.ok) throw new Error('Failed to fetch');
         return await response.json();
-    }, // <--- Comma is vital!
+    },
 
     async save(data) {
         const response = await fetch('/api/annotations', {
@@ -15,6 +14,7 @@ export const annotationService = {
             body: JSON.stringify(data)
         });
         const saved = await response.json();
+        // Use saved._id from DB to ensure everyone has the primary key
         socket.emit('new-annotation', { ...data, _id: saved._id });
         return saved;
     },
@@ -34,24 +34,34 @@ export const annotationService = {
             body: JSON.stringify({ text: newText })
         });
         if (response.ok) {
-            socket.emit('update-annotation-text', { _id: id, annotationId: internalId, newText, poemId });
+            socket.emit('update-annotation-text', { 
+                _id: id, 
+                annotationId: internalId, 
+                newText, 
+                poemId 
+            });
         }
         return response.ok;
     },
 
     async updatePosition(annotation) {
+        // 1. Send to Server (Database)
         const response = await fetch(`/api/annotations/${annotation._id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ relativePosition: annotation.relativePosition })
         });
+
+        // 2. Broadcast to Others
         if (response.ok) {
             socket.emit('update-annotation-position', {
                 _id: annotation._id,
                 annotationId: annotation.annotationId,
                 relativePosition: annotation.relativePosition,
-                poemId: annotation.poemId
+                poemId: annotation.poemId,
+                senderId: socket.id // 👈 ADD THIS: Helps prevent feedback loops
             });
         }
+        return response.ok;
     } 
-}; // Close the object
+};

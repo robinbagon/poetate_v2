@@ -150,7 +150,6 @@ h2 {
     background-color: transparent;
     color: #999;
     border: 1px solid #bbb;
-    margin-top: -5px; /* Pull it closer to the save button */
 }
 
 #cancelAnnotation:hover {
@@ -723,39 +722,56 @@ h2 {
 
 
 
-/* Floating Annotate Button */
+/* Floating Annotate Button - Industrial Style */
 .annotate-floating-btn {
     position: absolute;
-    display: none; /* Hidden by default */
+    display: none;
     z-index: 9999;
     
-    /* Colors & Typography */
-    background-color: #85e085;
-    color: white;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 20px;
+    /* Typography: Matching your 'Space Mono' theme */
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: #fff;
     
-    /* Layout */
-    padding: 12px 18px;
-    min-width: 90px;
-    height: 44px; /* Optimal touch target size */
+    /* Colors: High-contrast black/dark gray instead of green */
+    background-color: #000;
     
-    /* Border & Shadow */
-    border: 1px solid #aaa;
-    border-radius: 4px;
+    /* Layout: Precise and sharp */
+    padding: 0 20px;
+    height: 48px; /* Slightly larger for better touch ergonomics */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Border & Shadow: Sharp corners, industrial block shadow */
+    border: 2px solid #000;
+    border-radius: 0; /* Sharp corners match the boxes */
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2); /* Matching the box-shadow style */
     
-    /* Prevent text selection on the button itself */
+    /* Smoothness but no "squish" */
+    transition: transform 0.05s, box-shadow 0.05s;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: none;
 }
 
-/* Feedback when tapped */
+/* Feedback when tapped: "Mechanical" feel */
 .annotate-floating-btn:active {
-    background-color: #6bc96b;
-    transform: scale(0.98);
+    background-color: #333;
+    /* The button "sinks" into the page by removing the shadow */
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.2);
+}
+
+/* Optional: Add a small icon-like prefix if you use innerHTML in JS */
+/* e.g., button.innerHTML = '<span>+</span> ANNOTATE'; */
+.annotate-floating-btn span {
+    margin-right: 8px;
+    font-size: 18px;
 }
 
 
@@ -1096,4 +1112,72 @@ h2 {
 /* Disable transition during manual dragging so it doesn't feel laggy */
 .annotation-box.dragging {
     transition: none;
+}
+
+.poem-word {
+    transition: background-color 0.2s;
+    /* Default: allow selection (Desktop) */
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Only disable selection on devices that actually use touch */
+@media (pointer: coarse) {
+    .poem-word {
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        user-select: none;
+    }
+}
+
+/* Our custom "Paint" highlight */
+.poem-word.is-selecting {
+    background-color: rgba(0, 123, 255, 0.3);
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.delete-btn {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-left: auto; /* Pushes delete to the far right */
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    align-items: center;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between; /* Pushes Save/Cancel left, Delete right */
+  align-items: center;
+  margin-top: 12px;
+  gap: 10px;
+}
+
+.action-group {
+  display: flex;
+  gap: 8px; /* Space between Save and Cancel */
+}
+
+/* Optional: Make Delete look distinct so it's not clicked by mistake */
+.delete-btn {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+/* Ensure buttons don't shrink too small on mobile */
+.modal-actions button {
+  white-space: nowrap;
+  padding: 10px 15px;
 }
