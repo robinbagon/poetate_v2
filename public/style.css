@@ -8,6 +8,12 @@ body {
     align-items: center;
     min-height: 100vh;
     background-color: #f9f9f9;
+    min-width: 1200px;
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 h1, h2, p {
@@ -35,7 +41,6 @@ h2 {
     margin-bottom: 120px;
     line-height: 1.7; /* Crucial for poetry readability */
 }
-
 
 /* Poem content */
 .poem-content {
